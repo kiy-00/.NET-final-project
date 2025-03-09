@@ -51,12 +51,12 @@ namespace PixelPerfect
                             {
                                 options.TokenValidationParameters = new TokenValidationParameters
                                 {
-                                    ValidateIssuer = true,
-                                    ValidateAudience = true,
+                                    ValidateIssuer = false,
+                                    ValidateAudience = false,
                                     ValidateLifetime = true,
                                     ValidateIssuerSigningKey = true,
-                                    ValidIssuer = issuer,
-                                    ValidAudience = audience,
+                                    //ValidIssuer = issuer,
+                                    //ValidAudience = audience,
                                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
                                 };
                             });
@@ -137,13 +137,16 @@ namespace PixelPerfect
                         if (env.IsDevelopment())
                         {
                             app.UseDeveloperExceptionPage();
-                            app.UseSwagger();
-                            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "PixelPerfect API v1"));
                         }
 
                         app.UseHttpsRedirection();
 
                         app.UseRouting();
+                        if (env.IsDevelopment())
+                        {
+                            app.UseSwagger();
+                            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "PixelPerfect API v1"));
+                        }
 
                         app.UseCors("AllowAnyOrigin");
 
@@ -154,7 +157,8 @@ namespace PixelPerfect
                         // 在 app.UseEndpoints 之前添加
                         app.UseEndpoints(endpoints =>
                         {
-                            endpoints.MapGet("/", context => {
+                            endpoints.MapGet("/", context =>
+                            {
                                 context.Response.Redirect("/swagger");
                                 return Task.CompletedTask;
                             });
