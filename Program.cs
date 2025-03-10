@@ -74,13 +74,6 @@ namespace PixelPerfect
 
                         // 注册仓库
                         services.AddScoped<UserRepo>();
-                        //services.AddScoped<BookingRepo>();
-                        //services.AddScoped<PortfolioRepo>();
-                        //services.AddScoped<PhotoRepo>();
-                        //services.AddScoped<PostRepo>();
-                        //services.AddScoped<RetouchOrderRepo>();
-                        //services.AddScoped<NotificationRepo>();
-
                         // 注册服务
                         services.AddScoped<IUserService, UserService>();
 
@@ -95,12 +88,11 @@ namespace PixelPerfect
                         // 添加作品集服务
                         services.AddScoped<PortfolioRepo>();
                         services.AddScoped<IPortfolioService, PortfolioService>();
-                        //services.AddScoped<IBooking, BookingService>();
-                        //services.AddScoped<IPortfolio, PortfolioService>();
-                        //services.AddScoped<IPhoto, PhotoService>();
-                        //services.AddScoped<IPost, PostService>();
-                        //services.AddScoped<IRetouchOrder, RetouchOrderService>();
-                        //services.AddScoped<INotification, NotificationService>();
+
+                        // 注册预约相关服务
+                        services.AddScoped<BookingRepo>();
+                        services.AddScoped<IBookingService, BookingService>();
+                        
 
                         // Swagger配置
                         services.AddSwaggerGen(c =>
