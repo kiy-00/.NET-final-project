@@ -92,7 +92,21 @@ namespace PixelPerfect
                         // 注册预约相关服务
                         services.AddScoped<BookingRepo>();
                         services.AddScoped<IBookingService, BookingService>();
-                        
+
+                        // 注册修图订单相关服务
+                        // 注册所有需要的仓库
+                        services.AddScoped<PhotoRepo>();
+                        services.AddScoped<RetoucherRepo>();
+                        services.AddScoped<RetouchOrderRepo>();
+
+                        // 注册所有需要的服务
+                        services.AddScoped<IPhotoService, PhotoService>();
+                        services.AddScoped<IRetoucherService, RetoucherService>();
+                        services.AddScoped<IRetouchOrderService, RetouchOrderService>();
+
+                        // 注册通知相关服务
+                        services.AddScoped<NotificationRepo>();
+                        services.AddScoped<INotificationService, NotificationService>();
 
                         // Swagger配置
                         services.AddSwaggerGen(c =>
