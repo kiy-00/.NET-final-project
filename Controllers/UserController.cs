@@ -38,18 +38,22 @@ namespace PixelPerfect.Controllers
                     FirstName = request.FirstName,
                     LastName = request.LastName,
                     PhoneNumber = request.PhoneNumber,
-                    UserType = "Regular",
                     IsActive = true
                 };
 
-                var createdUser = await _userService.CreateUserAsync(user, request.Password);
+                // 默认注册为普通用户
+                var roles = request.Roles?.Count > 0 ? request.Roles : new List<string> { "Regular" };
+                var createdUser = await _userService.CreateUserAsync(user, request.Password, roles);
+
+                // 获取用户角色
+                var userRoles = await _userService.GetUserRolesAsync(createdUser.UserId);
 
                 return Ok(new
                 {
                     UserId = createdUser.UserId,
                     Username = createdUser.Username,
                     Email = createdUser.Email,
-                    UserType = createdUser.UserType
+                    Roles = userRoles
                 });
             }
             catch (InvalidOperationException ex)
@@ -108,13 +112,16 @@ namespace PixelPerfect.Controllers
                     return StatusCode(403, new { message = "Account is inactive. Please contact support." });
                 }
 
+                // 获取用户角色
+                var userRoles = await _userService.GetUserRolesAsync(user.UserId);
+
                 Console.WriteLine($"登录成功: UserId = {user.UserId}, Username = {user.Username}");
                 return Ok(new
                 {
                     UserId = user.UserId,
                     Username = user.Username,
                     Email = user.Email,
-                    UserType = user.UserType,
+                    Roles = userRoles,
                     Token = token
                 });
             }
@@ -153,6 +160,7 @@ namespace PixelPerfect.Controllers
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
                 var user = await _userService.GetUserByIdAsync(userId);
+                var roles = await _userService.GetUserRolesAsync(userId);
 
                 var response = new
                 {
@@ -162,7 +170,7 @@ namespace PixelPerfect.Controllers
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     PhoneNumber = user.PhoneNumber,
-                    UserType = user.UserType,
+                    Roles = roles,
                     CreatedAt = user.CreatedAt,
                     LastLogin = user.LastLogin
                 };
@@ -203,10 +211,9 @@ namespace PixelPerfect.Controllers
                 existingUser.LastName = request.LastName;
                 existingUser.PhoneNumber = request.PhoneNumber;
 
-                // 只有管理员可以修改用户类型和活跃状态
+                // 只有管理员可以修改用户活跃状态
                 if (User.IsInRole("Admin"))
                 {
-                    existingUser.UserType = request.UserType ?? existingUser.UserType;
                     existingUser.IsActive = request.IsActive ?? existingUser.IsActive;
                 }
 
@@ -281,29 +288,116 @@ namespace PixelPerfect.Controllers
             }
         }
 
+        // 用户角色管理
+
+        // 添加用户角色
+        [Authorize(Roles = "Admin")]
+        [HttpPost("role")]
+        public async Task<IActionResult> AddUserRole([FromBody] UserRoleRequest request)
+        {
+            try
+            {
+                var result = await _userService.AddUserRoleAsync(request.UserId, request.RoleType);
+                if (result)
+                    return Ok(new { message = $"Role '{request.RoleType}' added to user successfully." });
+                else
+                    return BadRequest(new { message = "Failed to add role to user." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while adding user role." });
+            }
+        }
+
+        // 移除用户角色
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("role")]
+        public async Task<IActionResult> RemoveUserRole([FromBody] UserRoleRequest request)
+        {
+            try
+            {
+                var result = await _userService.RemoveUserRoleAsync(request.UserId, request.RoleType);
+                if (result)
+                    return Ok(new { message = $"Role '{request.RoleType}' removed from user successfully." });
+                else
+                    return BadRequest(new { message = "Failed to remove role from user." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while removing user role." });
+            }
+        }
+
+        // 获取用户角色
+        [Authorize]
+        [HttpGet("{userId}/roles")]
+        public async Task<IActionResult> GetUserRoles(int userId)
+        {
+            try
+            {
+                // 非管理员只能查看自己的角色
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                if (currentUserId != userId && !User.IsInRole("Admin"))
+                    return StatusCode(403, new { message = "You are not authorized to view this user's roles." });
+
+                var roles = await _userService.GetUserRolesAsync(userId);
+                return Ok(roles);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving user roles." });
+            }
+        }
+
+        // 查询用户是否有特定角色
+        [Authorize]
+        [HttpGet("{userId}/has-role")]
+        public async Task<IActionResult> CheckUserRole(int userId, [FromQuery] string roleType)
+        {
+            try
+            {
+                // 非管理员只能查看自己的角色
+                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                if (currentUserId != userId && !User.IsInRole("Admin"))
+                    return StatusCode(403, new { message = "You are not authorized to view this user's roles." });
+
+                var hasRole = await _userService.HasRoleAsync(userId, roleType);
+                return Ok(hasRole);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while checking user role." });
+            }
+        }
+
         // 以下是管理员功能
 
         // 获取所有用户
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public async Task<IActionResult> GetAllUsers([FromQuery] string? userType)
+        public async Task<IActionResult> GetAllUsers([FromQuery] string? roleType)
         {
             try
             {
-                var users = await _userService.GetAllUsersAsync(userType);
+                var users = await _userService.GetAllUsersAsync(roleType);
+                var response = new List<object>();
 
-                var response = users.Select(u => new
+                foreach (var user in users)
                 {
-                    UserId = u.UserId,
-                    Username = u.Username,
-                    Email = u.Email,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    UserType = u.UserType,
-                    IsActive = u.IsActive,
-                    CreatedAt = u.CreatedAt,
-                    LastLogin = u.LastLogin
-                }).ToList();
+                    var roles = await _userService.GetUserRolesAsync(user.UserId);
+                    response.Add(new
+                    {
+                        UserId = user.UserId,
+                        Username = user.Username,
+                        Email = user.Email,
+                        FirstName = user.FirstName,
+                        LastName = user.LastName,
+                        Roles = roles,
+                        IsActive = user.IsActive,
+                        CreatedAt = user.CreatedAt,
+                        LastLogin = user.LastLogin
+                    });
+                }
 
                 return Ok(response);
             }
@@ -321,6 +415,7 @@ namespace PixelPerfect.Controllers
             try
             {
                 var user = await _userService.GetUserByIdAsync(userId);
+                var roles = await _userService.GetUserRolesAsync(userId);
 
                 var response = new
                 {
@@ -330,7 +425,7 @@ namespace PixelPerfect.Controllers
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     PhoneNumber = user.PhoneNumber,
-                    UserType = user.UserType,
+                    Roles = roles,
                     IsActive = user.IsActive,
                     CreatedAt = user.CreatedAt,
                     LastLogin = user.LastLogin
@@ -380,17 +475,22 @@ namespace PixelPerfect.Controllers
             try
             {
                 var users = await _userService.SearchUsersAsync(searchTerm);
+                var response = new List<object>();
 
-                var response = users.Select(u => new
+                foreach (var user in users)
                 {
-                    UserId = u.UserId,
-                    Username = u.Username,
-                    Email = u.Email,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    UserType = u.UserType,
-                    IsActive = u.IsActive
-                }).ToList();
+                    var roles = await _userService.GetUserRolesAsync(user.UserId);
+                    response.Add(new
+                    {
+                        UserId = user.UserId,
+                        Username = user.Username,
+                        Email = user.Email,
+                        FirstName = user.FirstName,
+                        LastName = user.LastName,
+                        Roles = roles,
+                        IsActive = user.IsActive
+                    });
+                }
 
                 return Ok(response);
             }

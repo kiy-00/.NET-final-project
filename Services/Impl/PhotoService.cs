@@ -9,14 +9,14 @@ namespace PixelPerfect.Services.Impl
 {
     public class PhotoService : IPhotoService
     {
-        private readonly PhotobookingdbContext _context;
+        private PhotoBookingDbContext _context;
         private readonly PhotoRepo _photoRepo;
         private readonly BookingRepo _bookingRepo;
         private readonly IWebHostEnvironment _hostEnvironment;
         private readonly string _uploadDirectory;
 
         public PhotoService(
-            PhotobookingdbContext context,
+           PhotoBookingDbContext context,
             PhotoRepo photoRepo,
             BookingRepo bookingRepo,
             IWebHostEnvironment hostEnvironment)

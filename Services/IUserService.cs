@@ -1,6 +1,5 @@
 ﻿// Services/IUser.cs
 using PixelPerfect.Entities;
-
 namespace PixelPerfect.Services
 {
     public interface IUserService
@@ -9,10 +8,17 @@ namespace PixelPerfect.Services
         Task<User> GetUserByIdAsync(int userId);
         Task<User> GetUserByUsernameAsync(string username);
         Task<User> GetUserByEmailAsync(string email);
-        Task<List<User>> GetAllUsersAsync(string? userType = null);
-        Task<User> CreateUserAsync(User user, string password);
+        Task<List<User>> GetAllUsersAsync(string? roleType = null);
+        Task<List<User>> GetUsersByRoleAsync(string roleType);
+        Task<User> CreateUserAsync(User user, string password, List<string> roles = null);
         Task<bool> UpdateUserAsync(User user);
         Task<bool> DeleteUserAsync(int userId);
+
+        // 用户角色相关
+        Task<List<string>> GetUserRolesAsync(int userId);
+        Task<bool> AddUserRoleAsync(int userId, string roleType);
+        Task<bool> RemoveUserRoleAsync(int userId, string roleType);
+        Task<bool> HasRoleAsync(int userId, string roleType);
 
         // 认证相关
         Task<(User? user, string token)> AuthenticateAsync(string usernameOrEmail, string password);

@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace PixelPerfect.Services.Impl
 {
@@ -14,11 +15,13 @@ namespace PixelPerfect.Services.Impl
     {
         private readonly UserRepo _userRepo;
         private readonly IConfiguration _configuration;
+        private readonly PhotoBookingDbContext _context;
 
-        public UserService(UserRepo userRepo, IConfiguration configuration)
+        public UserService(UserRepo userRepo, IConfiguration configuration, PhotoBookingDbContext context)
         {
             _userRepo = userRepo;
             _configuration = configuration;
+            _context = context;
         }
 
         // 基础用户操作
@@ -28,6 +31,12 @@ namespace PixelPerfect.Services.Impl
             if (user == null)
                 throw new KeyNotFoundException($"User with ID {userId} not found.");
             return user;
+        }
+
+        // 添加到 UserService.cs 中
+        public async Task<List<User>> GetUsersByRoleAsync(string roleType)
+        {
+            return await _userRepo.GetUsersByRoleAsync(roleType);
         }
 
         public async Task<User> GetUserByUsernameAsync(string username)
@@ -46,12 +55,19 @@ namespace PixelPerfect.Services.Impl
             return user;
         }
 
-        public async Task<List<User>> GetAllUsersAsync(string? userType = null)
+        public async Task<List<User>> GetAllUsersAsync(string? roleType = null)
         {
-            return await _userRepo.GetAllAsync(userType);
+            if (string.IsNullOrEmpty(roleType))
+            {
+                return await _userRepo.GetAllAsync();
+            }
+            else
+            {
+                return await _userRepo.GetUsersByRoleAsync(roleType);
+            }
         }
 
-        public async Task<User> CreateUserAsync(User user, string password)
+        public async Task<User> CreateUserAsync(User user, string password, List<string> roles = null)
         {
             // 验证用户名和邮箱的唯一性
             if (!await IsUsernameUniqueAsync(user.Username))
@@ -68,7 +84,17 @@ namespace PixelPerfect.Services.Impl
             user.Salt = salt;
             user.CreatedAt = DateTime.UtcNow;
 
-            return await _userRepo.CreateAsync(user);
+            // 创建用户
+            var createdUser = await _userRepo.CreateAsync(user);
+
+            // 添加用户角色
+            roles ??= new List<string> { "Regular" };
+            foreach (var role in roles)
+            {
+                await AddUserRoleAsync(createdUser.UserId, role);
+            }
+
+            return createdUser;
         }
 
         public async Task<bool> UpdateUserAsync(User user)
@@ -98,6 +124,55 @@ namespace PixelPerfect.Services.Impl
             return await _userRepo.DeleteAsync(userId);
         }
 
+        // 用户角色相关方法
+        public async Task<List<string>> GetUserRolesAsync(int userId)
+        {
+            return await _context.Userroles
+                .Where(r => r.UserId == userId)
+                .Select(r => r.RoleType)
+                .ToListAsync();
+        }
+
+        public async Task<bool> AddUserRoleAsync(int userId, string roleType)
+        {
+            // 检查用户是否存在
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return false;
+
+            // 检查是否已有该角色
+            var existingRole = await _context.Userroles
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.RoleType == roleType);
+            if (existingRole != null) return true; // 已有该角色
+
+            // 添加新角色
+            var userRole = new Userrole
+            {
+                UserId = userId,
+                RoleType = roleType,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _context.Userroles.AddAsync(userRole);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> RemoveUserRoleAsync(int userId, string roleType)
+        {
+            var role = await _context.Userroles
+                .FirstOrDefaultAsync(r => r.UserId == userId && r.RoleType == roleType);
+
+            if (role == null) return false;
+
+            _context.Userroles.Remove(role);
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> HasRoleAsync(int userId, string roleType)
+        {
+            return await _context.Userroles
+                .AnyAsync(r => r.UserId == userId && r.RoleType == roleType);
+        }
+
         // 认证相关
         public async Task<(User? user, string token)> AuthenticateAsync(string usernameOrEmail, string password)
         {
@@ -117,7 +192,7 @@ namespace PixelPerfect.Services.Impl
             await _userRepo.UpdateAsync(user);
 
             // 生成JWT令牌
-            var token = GenerateJwtToken(user);
+            var token = await GenerateJwtTokenAsync(user);
 
             return (user, token);
         }
@@ -172,14 +247,13 @@ namespace PixelPerfect.Services.Impl
 
         public async Task<Photographer> CreatePhotographerProfileAsync(Photographer photographer)
         {
-            // 确认用户存在且类型正确
+            // 确认用户存在
             var user = await _userRepo.GetByIdAsync(photographer.UserId);
             if (user == null)
                 throw new KeyNotFoundException($"User with ID {photographer.UserId} not found.");
 
-            // 更新用户类型为摄影师
-            user.UserType = "Photographer";
-            await _userRepo.UpdateAsync(user);
+            // 添加摄影师角色
+            await AddUserRoleAsync(photographer.UserId, "Photographer");
 
             // 创建摄影师档案
             photographer.IsVerified = false;
@@ -229,14 +303,13 @@ namespace PixelPerfect.Services.Impl
 
         public async Task<Retoucher> CreateRetoucherProfileAsync(Retoucher retoucher)
         {
-            // 确认用户存在且类型正确
+            // 确认用户存在
             var user = await _userRepo.GetByIdAsync(retoucher.UserId);
             if (user == null)
                 throw new KeyNotFoundException($"User with ID {retoucher.UserId} not found.");
 
-            // 更新用户类型为修图师
-            user.UserType = "Retoucher";
-            await _userRepo.UpdateAsync(user);
+            // 添加修图师角色
+            await AddUserRoleAsync(retoucher.UserId, "Retoucher");
 
             // 创建修图师档案
             retoucher.IsVerified = false;
@@ -319,43 +392,43 @@ namespace PixelPerfect.Services.Impl
             }
         }
 
-        private string GenerateJwtToken(User user)
+        private async Task<string> GenerateJwtTokenAsync(User user)
         {
             try
             {
                 var tokenHandler = new JwtSecurityTokenHandler();
 
-
                 // 使用正确的配置路径
-
                 var jwtSecret = _configuration["JwtSettings:SecretKey"];
 
                 Console.WriteLine($"JWT Secret 配置状态: {(string.IsNullOrEmpty(jwtSecret) ? "为空" : "已配置")}");
 
-
                 if (string.IsNullOrEmpty(jwtSecret))
-
                 {
-
                     Console.WriteLine("严重错误: JWT Secret未配置");
-
                     throw new InvalidOperationException("JWT Secret配置缺失。请检查appsettings.json文件。");
-
                 }
-
 
                 var key = Encoding.ASCII.GetBytes(jwtSecret);
 
+                // 获取用户角色
+                var userRoles = await GetUserRolesAsync(user.UserId);
+
                 // 检查用户属性
-                Console.WriteLine($"用户信息: ID={user.UserId}, Username={user.Username}, Email={user.Email}, Type={user.UserType}");
+                Console.WriteLine($"用户信息: ID={user.UserId}, Username={user.Username}, Email={user.Email}, Roles={string.Join(",", userRoles)}");
 
                 var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.UserType)
-        };
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Email, user.Email)
+                };
+
+                // 添加所有角色
+                foreach (var role in userRoles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
 
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {

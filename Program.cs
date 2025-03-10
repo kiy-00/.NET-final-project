@@ -68,7 +68,7 @@ namespace PixelPerfect
 
                         services.AddHttpContextAccessor();
 
-                        services.AddDbContext<PhotobookingdbContext>(options =>
+                        services.AddDbContext<PhotoBookingDbContext>(options =>
                             options.UseMySql(configuration.GetConnectionString("DefaultConnection"),
                                 new MySqlServerVersion(new Version(8, 0, 28))));
 

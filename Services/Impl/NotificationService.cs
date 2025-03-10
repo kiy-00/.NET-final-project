@@ -6,12 +6,12 @@ namespace PixelPerfect.Services.Impl
 {
     public class NotificationService : INotificationService
     {
-        private readonly PhotobookingdbContext _context;
+        private PhotoBookingDbContext _context;
         private readonly NotificationRepo _notificationRepo;
         private readonly UserRepo _userRepo;
 
         public NotificationService(
-            PhotobookingdbContext context,
+           PhotoBookingDbContext context,
             NotificationRepo notificationRepo,
             UserRepo userRepo)
         {

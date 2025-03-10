@@ -6,13 +6,13 @@ namespace PixelPerfect.Services.Impl
 {
     public class RetouchOrderService : IRetouchOrderService
     {
-        private readonly PhotobookingdbContext _context;
+        private PhotoBookingDbContext _context;
         private readonly RetouchOrderRepo _retouchOrderRepo;
         private readonly RetoucherRepo _retoucherRepo;
         private readonly PhotoRepo _photoRepo;
 
         public RetouchOrderService(
-            PhotobookingdbContext context,
+           PhotoBookingDbContext context,
             RetouchOrderRepo retouchOrderRepo,
             RetoucherRepo retoucherRepo,
             PhotoRepo photoRepo)

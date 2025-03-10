@@ -10,12 +10,12 @@ namespace PixelPerfect.Services.Impl
 {
     public class PortfolioService : IPortfolioService
     {
-        private readonly PhotobookingdbContext _context;
+        private PhotoBookingDbContext _context;
         private readonly PortfolioRepo _portfolioRepo;
         private readonly IWebHostEnvironment _environment;
         private readonly string _uploadDirectory;
 
-        public PortfolioService(PhotobookingdbContext context, PortfolioRepo portfolioRepo, IWebHostEnvironment environment)
+        public PortfolioService(PhotoBookingDbContext context, PortfolioRepo portfolioRepo, IWebHostEnvironment environment)
         {
             _context = context;
             _portfolioRepo = portfolioRepo;

@@ -21,8 +21,6 @@ public partial class User
 
     public string? PhoneNumber { get; set; }
 
-    public string UserType { get; set; } = null!;
-
     public DateTime CreatedAt { get; set; }
 
     public DateTime? LastLogin { get; set; }
@@ -48,4 +46,6 @@ public partial class User
     public virtual Retoucher? Retoucher { get; set; }
 
     public virtual ICollection<Retouchorder> Retouchorders { get; set; } = new List<Retouchorder>();
+
+    public virtual ICollection<Userrole> Userroles { get; set; } = new List<Userrole>();
 }

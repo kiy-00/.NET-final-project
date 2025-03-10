@@ -5,13 +5,13 @@ using Pomelo.EntityFrameworkCore.MySql.Scaffolding.Internal;
 
 namespace PixelPerfect.Entities;
 
-public partial class PhotobookingdbContext : DbContext
+public partial class PhotoBookingDbContext : DbContext
 {
-    public PhotobookingdbContext()
+    public PhotoBookingDbContext()
     {
     }
 
-    public PhotobookingdbContext(DbContextOptions<PhotobookingdbContext> options)
+    public PhotoBookingDbContext(DbContextOptions<PhotoBookingDbContext> options)
         : base(options)
     {
     }
@@ -44,9 +44,13 @@ public partial class PhotobookingdbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<Userrole> Userroles { get; set; }
+
+    public virtual DbSet<Userrolesview> Userrolesviews { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseMySql("server=localhost;port=3306;database=photobookingdb;uid=root;pwd=IamSherlocked623", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.4.4-mysql"));
+        => optionsBuilder.UseMySql("server=localhost;port=3306;database=PhotoBookingDB;uid=root;pwd=IamSherlocked623", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.4.4-mysql"));
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -403,7 +407,7 @@ public partial class PhotobookingdbContext : DbContext
             entity.HasIndex(e => e.IsPublic, "idx_ispublic");
 
             entity.Property(e => e.PortfolioId).HasColumnName("PortfolioID");
-            entity.Property(e => e.Category).HasColumnType("enum('Portrait','Wedding','Fashion','Product','Event','Other')");
+            entity.Property(e => e.Category).HasColumnType("enum('Portrait','Wedding','Fashion','Product','Event','Other','Landscape')");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("datetime");
@@ -474,8 +478,6 @@ public partial class PhotobookingdbContext : DbContext
 
             entity.HasIndex(e => e.Username, "idx_username").IsUnique();
 
-            entity.HasIndex(e => e.UserType, "idx_usertype");
-
             entity.Property(e => e.UserId).HasColumnName("UserID");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
@@ -490,9 +492,40 @@ public partial class PhotobookingdbContext : DbContext
             entity.Property(e => e.PasswordHash).HasMaxLength(255);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.Salt).HasMaxLength(50);
-            entity.Property(e => e.UserType)
-                .HasDefaultValueSql("'Regular'")
-                .HasColumnType("enum('Regular','Photographer','Retoucher','Admin')");
+            entity.Property(e => e.Username).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<Userrole>(entity =>
+        {
+            entity.HasKey(e => e.UserRoleId).HasName("PRIMARY");
+
+            entity.ToTable("userroles");
+
+            entity.HasIndex(e => e.RoleType, "idx_roletype");
+
+            entity.HasIndex(e => new { e.UserId, e.RoleType }, "uk_user_role").IsUnique();
+
+            entity.Property(e => e.UserRoleId).HasColumnName("UserRoleID");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("datetime");
+            entity.Property(e => e.RoleType).HasColumnType("enum('Regular','Photographer','Retoucher','Admin')");
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Userroles)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("fk_user_role");
+        });
+
+        modelBuilder.Entity<Userrolesview>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("userrolesview");
+
+            entity.Property(e => e.Email).HasMaxLength(100);
+            entity.Property(e => e.Roles).HasColumnType("text");
+            entity.Property(e => e.UserId).HasColumnName("UserID");
             entity.Property(e => e.Username).HasMaxLength(50);
         });
 

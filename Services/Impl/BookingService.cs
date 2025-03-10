@@ -7,11 +7,11 @@ namespace PixelPerfect.Services.Impl
 {
     public class BookingService : IBookingService
     {
-        private readonly PhotobookingdbContext _context;
+        private PhotoBookingDbContext _context;
         private readonly BookingRepo _bookingRepo;
         private readonly PhotographerRepo _photographerRepo;
 
-        public BookingService(PhotobookingdbContext context, BookingRepo bookingRepo, PhotographerRepo photographerRepo)
+        public BookingService(PhotoBookingDbContext context, BookingRepo bookingRepo, PhotographerRepo photographerRepo)
         {
             _context = context;
             _bookingRepo = bookingRepo;

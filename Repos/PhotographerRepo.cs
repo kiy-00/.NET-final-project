@@ -5,9 +5,9 @@ namespace PixelPerfect.Repos
 {
     public class PhotographerRepo
     {
-        private readonly PhotobookingdbContext _context;
+        private PhotoBookingDbContext _context;
 
-        public PhotographerRepo(PhotobookingdbContext context)
+        public PhotographerRepo(PhotoBookingDbContext context)
         {
             _context = context;
         }
