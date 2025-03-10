@@ -13,6 +13,7 @@ using PixelPerfect.Entities;
 using PixelPerfect.Repos;
 using PixelPerfect.Services;
 using PixelPerfect.Services.Impl;
+using System.IO; // 用于文件和目录操作
 
 namespace PixelPerfect
 {
@@ -81,7 +82,19 @@ namespace PixelPerfect
                         //services.AddScoped<NotificationRepo>();
 
                         // 注册服务
-                        services.AddScoped<IUser, UserService>();
+                        services.AddScoped<IUserService, UserService>();
+
+                        // 添加摄影师服务
+                        services.AddScoped<PhotographerRepo>();
+                        services.AddScoped<IPhotographerService, PhotographerService>();
+
+                        // 添加修图师服务
+                        services.AddScoped<RetoucherRepo>();
+                        services.AddScoped<IRetoucherService, RetoucherService>();
+
+                        // 添加作品集服务
+                        services.AddScoped<PortfolioRepo>();
+                        services.AddScoped<IPortfolioService, PortfolioService>();
                         //services.AddScoped<IBooking, BookingService>();
                         //services.AddScoped<IPortfolio, PortfolioService>();
                         //services.AddScoped<IPhoto, PhotoService>();
@@ -140,6 +153,36 @@ namespace PixelPerfect
                         }
 
                         app.UseHttpsRedirection();
+                        // 添加静态文件中间件
+                        app.UseStaticFiles();
+
+                        // 确保上传目录存在
+                        if (!string.IsNullOrEmpty(env.WebRootPath))
+                        {
+                            var uploadDir = Path.Combine(env.WebRootPath, "uploads", "portfolio");
+                            if (!Directory.Exists(uploadDir))
+                            {
+                                Directory.CreateDirectory(uploadDir);
+                            }
+                        }
+                        else
+                        {
+                            // WebRootPath为null时，使用ContentRootPath创建目录
+                            var contentRoot = env.ContentRootPath;
+                            var wwwrootDir = Path.Combine(contentRoot, "wwwroot");
+
+                            // 确保wwwroot目录存在
+                            if (!Directory.Exists(wwwrootDir))
+                                Directory.CreateDirectory(wwwrootDir);
+
+                            var uploadsDir = Path.Combine(wwwrootDir, "uploads");
+                            if (!Directory.Exists(uploadsDir))
+                                Directory.CreateDirectory(uploadsDir);
+
+                            var portfolioDir = Path.Combine(uploadsDir, "portfolio");
+                            if (!Directory.Exists(portfolioDir))
+                                Directory.CreateDirectory(portfolioDir);
+                        }
 
                         app.UseRouting();
                         if (env.IsDevelopment())

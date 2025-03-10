@@ -3,7 +3,7 @@ using PixelPerfect.Entities;
 
 namespace PixelPerfect.Services
 {
-    public interface IUser
+    public interface IUserService
     {
         // 基础用户操作
         Task<User> GetUserByIdAsync(int userId);

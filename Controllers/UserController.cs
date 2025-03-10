@@ -15,9 +15,9 @@ namespace PixelPerfect.Controllers
     [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
-        private readonly IUser _userService;
+        private readonly IUserService _userService;
 
-        public UserController(IUser userService)
+        public UserController(IUserService userService)
         {
             _userService = userService;
         }

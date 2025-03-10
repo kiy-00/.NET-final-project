@@ -10,7 +10,7 @@ using System.Text;
 
 namespace PixelPerfect.Services.Impl
 {
-    public class UserService : IUser
+    public class UserService : IUserService
     {
         private readonly UserRepo _userRepo;
         private readonly IConfiguration _configuration;
