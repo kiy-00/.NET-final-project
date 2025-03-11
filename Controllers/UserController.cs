@@ -1,5 +1,4 @@
-﻿// Controllers/UserController.cs
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using PixelPerfect.Entities;
@@ -7,7 +6,7 @@ using PixelPerfect.Services;
 using System.Security.Claims;
 using PixelPerfect.Models;
 using RegisterRequest = PixelPerfect.Models.RegisterRequest;
-using LoginRequest = PixelPerfect.Models.LoginRequest; // 添加模型引用
+using LoginRequest = PixelPerfect.Models.LoginRequest;
 
 namespace PixelPerfect.Controllers
 {
@@ -38,6 +37,7 @@ namespace PixelPerfect.Controllers
                     FirstName = request.FirstName,
                     LastName = request.LastName,
                     PhoneNumber = request.PhoneNumber,
+                    Biography = request.Biography,
                     IsActive = true
                 };
 
@@ -53,6 +53,7 @@ namespace PixelPerfect.Controllers
                     UserId = createdUser.UserId,
                     Username = createdUser.Username,
                     Email = createdUser.Email,
+                    Biography = createdUser.Biography,
                     Roles = userRoles
                 });
             }
@@ -121,6 +122,7 @@ namespace PixelPerfect.Controllers
                     UserId = user.UserId,
                     Username = user.Username,
                     Email = user.Email,
+                    Biography = user.Biography,
                     Roles = userRoles,
                     Token = token
                 });
@@ -162,6 +164,9 @@ namespace PixelPerfect.Controllers
                 var user = await _userService.GetUserByIdAsync(userId);
                 var roles = await _userService.GetUserRolesAsync(userId);
 
+                // 获取关注统计信息
+                var followStats = await _userService.GetFollowStatsAsync(userId);
+
                 var response = new
                 {
                     UserId = user.UserId,
@@ -170,9 +175,13 @@ namespace PixelPerfect.Controllers
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     PhoneNumber = user.PhoneNumber,
+                    Biography = user.Biography,
                     Roles = roles,
                     CreatedAt = user.CreatedAt,
-                    LastLogin = user.LastLogin
+                    LastLogin = user.LastLogin,
+                    // 关注统计
+                    FollowersCount = followStats.followersCount,
+                    FollowingCount = followStats.followingCount
                 };
 
                 return Ok(response);
@@ -210,6 +219,7 @@ namespace PixelPerfect.Controllers
                 existingUser.FirstName = request.FirstName;
                 existingUser.LastName = request.LastName;
                 existingUser.PhoneNumber = request.PhoneNumber;
+                existingUser.Biography = request.Biography;
 
                 // 只有管理员可以修改用户活跃状态
                 if (User.IsInRole("Admin"))
@@ -385,6 +395,8 @@ namespace PixelPerfect.Controllers
                 foreach (var user in users)
                 {
                     var roles = await _userService.GetUserRolesAsync(user.UserId);
+                    var followStats = await _userService.GetFollowStatsAsync(user.UserId);
+
                     response.Add(new
                     {
                         UserId = user.UserId,
@@ -392,10 +404,13 @@ namespace PixelPerfect.Controllers
                         Email = user.Email,
                         FirstName = user.FirstName,
                         LastName = user.LastName,
+                        Biography = user.Biography,
                         Roles = roles,
                         IsActive = user.IsActive,
                         CreatedAt = user.CreatedAt,
-                        LastLogin = user.LastLogin
+                        LastLogin = user.LastLogin,
+                        FollowersCount = followStats.followersCount,
+                        FollowingCount = followStats.followingCount
                     });
                 }
 
@@ -408,7 +423,6 @@ namespace PixelPerfect.Controllers
         }
 
         // 获取指定用户信息
-        [Authorize(Roles = "Admin")]
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUserById(int userId)
         {
@@ -417,7 +431,18 @@ namespace PixelPerfect.Controllers
                 var user = await _userService.GetUserByIdAsync(userId);
                 var roles = await _userService.GetUserRolesAsync(userId);
 
-                var response = new
+                // 获取关注统计
+                var followStats = await _userService.GetFollowStatsAsync(userId);
+
+                // 获取当前登录用户是否关注了该用户
+                bool isFollowedByCurrentUser = false;
+                if (User.Identity.IsAuthenticated)
+                {
+                    var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                    isFollowedByCurrentUser = await _userService.IsFollowingAsync(currentUserId, userId);
+                }
+
+                var response = new UserProfileResponse
                 {
                     UserId = user.UserId,
                     Username = user.Username,
@@ -425,10 +450,16 @@ namespace PixelPerfect.Controllers
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     PhoneNumber = user.PhoneNumber,
+                    Biography = user.Biography,
                     Roles = roles,
-                    IsActive = user.IsActive,
+                    IsActive = user.IsActive ?? true,
                     CreatedAt = user.CreatedAt,
-                    LastLogin = user.LastLogin
+                    LastLogin = user.LastLogin,
+                    // 关注统计
+                    FollowersCount = followStats.followersCount,
+                    FollowingCount = followStats.followingCount,
+                    // 当前用户是否关注了此用户
+                    IsFollowedByCurrentUser = isFollowedByCurrentUser
                 };
 
                 return Ok(response);
@@ -480,6 +511,8 @@ namespace PixelPerfect.Controllers
                 foreach (var user in users)
                 {
                     var roles = await _userService.GetUserRolesAsync(user.UserId);
+                    var followStats = await _userService.GetFollowStatsAsync(user.UserId);
+
                     response.Add(new
                     {
                         UserId = user.UserId,
@@ -487,8 +520,11 @@ namespace PixelPerfect.Controllers
                         Email = user.Email,
                         FirstName = user.FirstName,
                         LastName = user.LastName,
+                        Biography = user.Biography,
                         Roles = roles,
-                        IsActive = user.IsActive
+                        IsActive = user.IsActive,
+                        FollowersCount = followStats.followersCount,
+                        FollowingCount = followStats.followingCount
                     });
                 }
 

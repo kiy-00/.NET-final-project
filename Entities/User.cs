@@ -27,7 +27,16 @@ public partial class User
 
     public bool? IsActive { get; set; }
 
+    /// <summary>
+    /// 用户个人简介
+    /// </summary>
+    public string? Biography { get; set; }
+
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+
+    public virtual ICollection<Follow> FollowFolloweds { get; set; } = new List<Follow>();
+
+    public virtual ICollection<Follow> FollowFollowers { get; set; } = new List<Follow>();
 
     public virtual ICollection<Like> Likes { get; set; } = new List<Like>();
 

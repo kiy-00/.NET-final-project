@@ -20,6 +20,8 @@ public partial class PhotoBookingDbContext : DbContext
 
     public virtual DbSet<Bookingservice> Bookingservices { get; set; }
 
+    public virtual DbSet<Follow> Follows { get; set; }
+
     public virtual DbSet<Like> Likes { get; set; }
 
     public virtual DbSet<Notification> Notifications { get; set; }
@@ -43,6 +45,10 @@ public partial class PhotoBookingDbContext : DbContext
     public virtual DbSet<Retouchorder> Retouchorders { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
+
+    public virtual DbSet<UserFollowersView> UserFollowersViews { get; set; }
+
+    public virtual DbSet<UserFollowingView> UserFollowingViews { get; set; }
 
     public virtual DbSet<Userrole> Userroles { get; set; }
 
@@ -120,6 +126,43 @@ public partial class PhotoBookingDbContext : DbContext
                 .HasConstraintName("fk_booking_service");
         });
 
+        modelBuilder.Entity<Follow>(entity =>
+        {
+            entity.HasKey(e => e.FollowId).HasName("PRIMARY");
+
+            entity.ToTable("follows");
+
+            entity.HasIndex(e => e.FollowedId, "idx_followed");
+
+            entity.HasIndex(e => e.FollowerId, "idx_follower");
+
+            entity.HasIndex(e => e.Status, "idx_status");
+
+            entity.HasIndex(e => new { e.FollowerId, e.FollowedId }, "uk_follower_followed").IsUnique();
+
+            entity.Property(e => e.FollowId).HasColumnName("FollowID");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("datetime");
+            entity.Property(e => e.FollowedId)
+                .HasComment("被关注者ID")
+                .HasColumnName("FollowedID");
+            entity.Property(e => e.FollowerId)
+                .HasComment("关注者ID")
+                .HasColumnName("FollowerID");
+            entity.Property(e => e.Status)
+                .HasDefaultValueSql("'Active'")
+                .HasColumnType("enum('Active','Blocked')");
+
+            entity.HasOne(d => d.Followed).WithMany(p => p.FollowFolloweds)
+                .HasForeignKey(d => d.FollowedId)
+                .HasConstraintName("fk_followed_user");
+
+            entity.HasOne(d => d.Follower).WithMany(p => p.FollowFollowers)
+                .HasForeignKey(d => d.FollowerId)
+                .HasConstraintName("fk_follower_user");
+        });
+
         modelBuilder.Entity<Like>(entity =>
         {
             entity.HasKey(e => e.LikeId).HasName("PRIMARY");
@@ -165,7 +208,7 @@ public partial class PhotoBookingDbContext : DbContext
                 .HasColumnType("datetime");
             entity.Property(e => e.ReadAt).HasColumnType("datetime");
             entity.Property(e => e.Title).HasMaxLength(100);
-            entity.Property(e => e.Type).HasColumnType("enum('System','Booking','Interaction','Payment')");
+            entity.Property(e => e.Type).HasColumnType("enum('System','Booking','Interaction','Payment','Follow')");
             entity.Property(e => e.UserId).HasColumnName("UserID");
 
             entity.HasOne(d => d.User).WithMany(p => p.Notifications)
@@ -479,6 +522,9 @@ public partial class PhotoBookingDbContext : DbContext
             entity.HasIndex(e => e.Username, "idx_username").IsUnique();
 
             entity.Property(e => e.UserId).HasColumnName("UserID");
+            entity.Property(e => e.Biography)
+                .HasComment("用户个人简介")
+                .HasColumnType("text");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("datetime");
@@ -493,6 +539,30 @@ public partial class PhotoBookingDbContext : DbContext
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.Salt).HasMaxLength(50);
             entity.Property(e => e.Username).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<UserFollowersView>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("user_followers_view");
+
+            entity.Property(e => e.Followers).HasColumnType("text");
+            entity.Property(e => e.UserId)
+                .HasComment("被关注者ID")
+                .HasColumnName("UserID");
+        });
+
+        modelBuilder.Entity<UserFollowingView>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("user_following_view");
+
+            entity.Property(e => e.Following).HasColumnType("text");
+            entity.Property(e => e.UserId)
+                .HasComment("关注者ID")
+                .HasColumnName("UserID");
         });
 
         modelBuilder.Entity<Userrole>(entity =>

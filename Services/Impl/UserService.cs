@@ -1,5 +1,4 @@
-﻿// Services/Impl/UserService.cs
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using PixelPerfect.Entities;
 using PixelPerfect.Repos;
@@ -33,7 +32,6 @@ namespace PixelPerfect.Services.Impl
             return user;
         }
 
-        // 添加到 UserService.cs 中
         public async Task<List<User>> GetUsersByRoleAsync(string roleType)
         {
             return await _userRepo.GetUsersByRoleAsync(roleType);
@@ -83,6 +81,10 @@ namespace PixelPerfect.Services.Impl
             user.PasswordHash = passwordHash;
             user.Salt = salt;
             user.CreatedAt = DateTime.UtcNow;
+
+            // 确保 Biography 字段不为 null (如果没有提供)
+            if (user.Biography == null)
+                user.Biography = string.Empty;
 
             // 创建用户
             var createdUser = await _userRepo.CreateAsync(user);
@@ -451,6 +453,63 @@ namespace PixelPerfect.Services.Impl
                 Console.WriteLine($"堆栈跟踪: {ex.StackTrace}");
                 throw; // 重新抛出异常以便在控制器中捕获
             }
+        }
+
+        // 用户关注相关
+        public async Task<bool> FollowUserAsync(int followerId, int followedId)
+        {
+            // 不能关注自己
+            if (followerId == followedId)
+                return false;
+
+            // 检查用户是否存在
+            var follower = await _userRepo.GetByIdAsync(followerId);
+            var followed = await _userRepo.GetByIdAsync(followedId);
+            if (follower == null || followed == null)
+                return false;
+
+            // 检查是否已经关注
+            var existingFollow = await _userRepo.GetFollowAsync(followerId, followedId);
+            if (existingFollow != null)
+            {
+                // 如果之前取消了关注，可以重新激活
+                if (existingFollow.Status != "Active")
+                {
+                    return await _userRepo.UpdateFollowStatusAsync(existingFollow, "Active");
+                }
+                return false; // 已经处于关注状态
+            }
+
+            // 创建关注关系
+            return await _userRepo.CreateFollowAsync(followerId, followedId);
+        }
+
+        public async Task<bool> UnfollowUserAsync(int followerId, int followedId)
+        {
+            return await _userRepo.DeleteFollowAsync(followerId, followedId);
+        }
+
+        public async Task<bool> IsFollowingAsync(int followerId, int followedId)
+        {
+            var follow = await _userRepo.GetFollowAsync(followerId, followedId);
+            return follow != null && follow.Status == "Active";
+        }
+
+        public async Task<List<User>> GetFollowersAsync(int userId, int pageNumber = 1, int pageSize = 20)
+        {
+            return await _userRepo.GetFollowersAsync(userId, pageNumber, pageSize);
+        }
+
+        public async Task<List<User>> GetFollowingAsync(int userId, int pageNumber = 1, int pageSize = 20)
+        {
+            return await _userRepo.GetFollowingAsync(userId, pageNumber, pageSize);
+        }
+
+        public async Task<(int followersCount, int followingCount)> GetFollowStatsAsync(int userId)
+        {
+            var followersCount = await _userRepo.GetFollowersCountAsync(userId);
+            var followingCount = await _userRepo.GetFollowingCountAsync(userId);
+            return (followersCount, followingCount);
         }
     }
 }

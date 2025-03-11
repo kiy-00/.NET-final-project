@@ -1,5 +1,4 @@
-﻿// Repos/UserRepo.cs
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using PixelPerfect.Entities;
 
 namespace PixelPerfect.Repos
@@ -203,8 +202,80 @@ namespace PixelPerfect.Repos
 				.Where(u => u.Username.Contains(searchTerm) ||
 							u.Email.Contains(searchTerm) ||
 							u.FirstName.Contains(searchTerm) ||
-							u.LastName.Contains(searchTerm))
+							u.LastName.Contains(searchTerm) ||
+							u.Biography.Contains(searchTerm)) // 添加对Biography的搜索
 				.ToListAsync();
+		}
+
+		// 用户关注相关
+		public async Task<Follow?> GetFollowAsync(int followerId, int followedId)
+		{
+			return await _context.Follows
+				.FirstOrDefaultAsync(f => f.FollowerId == followerId && f.FollowedId == followedId);
+		}
+
+		public async Task<bool> CreateFollowAsync(int followerId, int followedId)
+		{
+			var follow = new Follow
+			{
+				FollowerId = followerId,
+				FollowedId = followedId,
+				CreatedAt = DateTime.UtcNow,
+				Status = "Active"
+			};
+
+			_context.Follows.Add(follow);
+			return await _context.SaveChangesAsync() > 0;
+		}
+
+		public async Task<bool> DeleteFollowAsync(int followerId, int followedId)
+		{
+			var follow = await GetFollowAsync(followerId, followedId);
+			if (follow == null) return false;
+
+			_context.Follows.Remove(follow);
+			return await _context.SaveChangesAsync() > 0;
+		}
+
+		public async Task<bool> UpdateFollowStatusAsync(Follow follow, string status)
+		{
+			follow.Status = status;
+			_context.Follows.Update(follow);
+			return await _context.SaveChangesAsync() > 0;
+		}
+
+		public async Task<List<User>> GetFollowersAsync(int userId, int pageNumber = 1, int pageSize = 20)
+		{
+			return await _context.Follows
+				.Where(f => f.FollowedId == userId && f.Status == "Active")
+				.OrderByDescending(f => f.CreatedAt)
+				.Skip((pageNumber - 1) * pageSize)
+				.Take(pageSize)
+				.Select(f => f.Follower)
+				.ToListAsync();
+		}
+
+		public async Task<List<User>> GetFollowingAsync(int userId, int pageNumber = 1, int pageSize = 20)
+		{
+			return await _context.Follows
+				.Where(f => f.FollowerId == userId && f.Status == "Active")
+				.OrderByDescending(f => f.CreatedAt)
+				.Skip((pageNumber - 1) * pageSize)
+				.Take(pageSize)
+				.Select(f => f.Followed)
+				.ToListAsync();
+		}
+
+		public async Task<int> GetFollowersCountAsync(int userId)
+		{
+			return await _context.Follows
+				.CountAsync(f => f.FollowedId == userId && f.Status == "Active");
+		}
+
+		public async Task<int> GetFollowingCountAsync(int userId)
+		{
+			return await _context.Follows
+				.CountAsync(f => f.FollowerId == userId && f.Status == "Active");
 		}
 	}
 }
