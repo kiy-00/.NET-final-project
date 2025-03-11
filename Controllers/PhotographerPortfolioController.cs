@@ -35,6 +35,27 @@ namespace PixelPerfect.Controllers
             }
         }
 
+        // 获取所有公开作品集（无需关键词和分类）
+        [HttpGet("public")]
+        public async Task<IActionResult> GetAllPublicPortfoliosSimple()
+        {
+            try
+            {
+                // 创建默认搜索参数，仅设置IsPublic为true
+                var searchParams = new PortfolioSearchParams
+                {
+                    IsPublic = true
+                };
+
+                var portfolios = await _portfolioService.GetAllPhotographerPortfoliosAsync(searchParams);
+                return Ok(portfolios);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving public portfolios." });
+            }
+        }
+
         // 获取指定摄影师的所有公开作品集
         [HttpGet("photographer/{photographerId}")]
         public async Task<IActionResult> GetPhotographerPortfolios(int photographerId, [FromQuery] PortfolioSearchParams searchParams)
@@ -47,6 +68,95 @@ namespace PixelPerfect.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while retrieving photographer portfolios." });
+            }
+        }
+
+        // 获取指定摄影师的所有公开作品集（无需关键词和分类）
+        [HttpGet("photographer/{photographerId}/public")]
+        public async Task<IActionResult> GetPhotographerPublicPortfoliosSimple(int photographerId)
+        {
+            try
+            {
+                // 创建默认搜索参数，仅设置IsPublic为true
+                var searchParams = new PortfolioSearchParams
+                {
+                    IsPublic = true
+                };
+
+                var portfolios = await _portfolioService.GetPhotographerPortfoliosByPhotographerIdAsync(photographerId, searchParams);
+                return Ok(portfolios);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving photographer public portfolios." });
+            }
+        }
+
+        // 获取指定摄影师的所有未公开作品集（仅限作品集所有者访问）
+        [Authorize]
+        [HttpGet("photographer/{photographerId}/private")]
+        public async Task<IActionResult> GetPhotographerPrivatePortfolios(int photographerId, [FromQuery] PortfolioSearchParams searchParams)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 验证用户是否是作品集所有者
+                var photographer = await _photographerService.GetPhotographerByIdAsync(photographerId);
+                if (photographer == null)
+                    return NotFound(new { message = $"Photographer with ID {photographerId} not found." });
+
+                // 只有作品集所有者可以查看，管理员也无法查看
+                if (photographer.UserId != userId)
+                    return Forbid();
+
+                // 创建一个专门查询非公开作品集的搜索参数
+                var privateSearchParams = new PortfolioSearchParams
+                {
+                    Keyword = searchParams.Keyword,
+                    Category = searchParams.Category,
+                    IsPublic = false // 确保只返回未公开的作品集
+                };
+
+                var portfolios = await _portfolioService.GetPhotographerPortfoliosByPhotographerIdAsync(photographerId, privateSearchParams);
+                return Ok(portfolios);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving private photographer portfolios." });
+            }
+        }
+
+        // 获取指定摄影师的所有未公开作品集（无需关键词和分类，仅限作品集所有者访问）
+        [Authorize]
+        [HttpGet("photographer/{photographerId}/private-simple")]
+        public async Task<IActionResult> GetPhotographerPrivatePortfoliosSimple(int photographerId)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 验证用户是否是作品集所有者
+                var photographer = await _photographerService.GetPhotographerByIdAsync(photographerId);
+                if (photographer == null)
+                    return NotFound(new { message = $"Photographer with ID {photographerId} not found." });
+
+                // 只有作品集所有者可以查看，管理员也无法查看
+                if (photographer.UserId != userId)
+                    return Forbid();
+
+                // 创建一个专门查询非公开作品集的搜索参数
+                var privateSearchParams = new PortfolioSearchParams
+                {
+                    IsPublic = false // 确保只返回未公开的作品集
+                };
+
+                var portfolios = await _portfolioService.GetPhotographerPortfoliosByPhotographerIdAsync(photographerId, privateSearchParams);
+                return Ok(portfolios);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving private photographer portfolios." });
             }
         }
 

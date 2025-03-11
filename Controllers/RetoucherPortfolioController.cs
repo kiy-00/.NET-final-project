@@ -35,6 +35,27 @@ namespace PixelPerfect.Controllers
             }
         }
 
+        // 获取所有公开作品集（无需关键词和分类）
+        [HttpGet("public")]
+        public async Task<IActionResult> GetAllPublicPortfoliosSimple()
+        {
+            try
+            {
+                // 创建默认搜索参数，仅设置IsPublic为true
+                var searchParams = new PortfolioSearchParams
+                {
+                    IsPublic = true
+                };
+
+                var portfolios = await _portfolioService.GetAllRetoucherPortfoliosAsync(searchParams);
+                return Ok(portfolios);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving public portfolios." });
+            }
+        }
+
         // 获取指定修图师的所有公开作品集
         [HttpGet("retoucher/{retoucherId}")]
         public async Task<IActionResult> GetRetoucherPortfolios(int retoucherId, [FromQuery] PortfolioSearchParams searchParams)
@@ -47,6 +68,95 @@ namespace PixelPerfect.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while retrieving retoucher portfolios." });
+            }
+        }
+
+        // 获取指定修图师的所有公开作品集（无需关键词和分类）
+        [HttpGet("retoucher/{retoucherId}/public")]
+        public async Task<IActionResult> GetRetoucherPublicPortfoliosSimple(int retoucherId)
+        {
+            try
+            {
+                // 创建默认搜索参数，仅设置IsPublic为true
+                var searchParams = new PortfolioSearchParams
+                {
+                    IsPublic = true
+                };
+
+                var portfolios = await _portfolioService.GetRetoucherPortfoliosByRetoucherIdAsync(retoucherId, searchParams);
+                return Ok(portfolios);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving retoucher public portfolios." });
+            }
+        }
+
+        // 获取指定修图师的所有未公开作品集（仅限作品集所有者访问）
+        [Authorize]
+        [HttpGet("retoucher/{retoucherId}/private")]
+        public async Task<IActionResult> GetRetoucherPrivatePortfolios(int retoucherId, [FromQuery] PortfolioSearchParams searchParams)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 验证用户是否是作品集所有者
+                var retoucher = await _retoucherService.GetRetoucherByIdAsync(retoucherId);
+                if (retoucher == null)
+                    return NotFound(new { message = $"Retoucher with ID {retoucherId} not found." });
+
+                // 只有作品集所有者可以查看，管理员也无法查看
+                if (retoucher.UserId != userId)
+                    return Forbid();
+
+                // 创建一个专门查询非公开作品集的搜索参数
+                var privateSearchParams = new PortfolioSearchParams
+                {
+                    Keyword = searchParams.Keyword,
+                    Category = searchParams.Category,
+                    IsPublic = false // 确保只返回未公开的作品集
+                };
+
+                var portfolios = await _portfolioService.GetRetoucherPortfoliosByRetoucherIdAsync(retoucherId, privateSearchParams);
+                return Ok(portfolios);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving private retoucher portfolios." });
+            }
+        }
+
+        // 获取指定修图师的所有未公开作品集（无需关键词和分类，仅限作品集所有者访问）
+        [Authorize]
+        [HttpGet("retoucher/{retoucherId}/private-simple")]
+        public async Task<IActionResult> GetRetoucherPrivatePortfoliosSimple(int retoucherId)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 验证用户是否是作品集所有者
+                var retoucher = await _retoucherService.GetRetoucherByIdAsync(retoucherId);
+                if (retoucher == null)
+                    return NotFound(new { message = $"Retoucher with ID {retoucherId} not found." });
+
+                // 只有作品集所有者可以查看，管理员也无法查看
+                if (retoucher.UserId != userId)
+                    return Forbid();
+
+                // 创建一个专门查询非公开作品集的搜索参数
+                var privateSearchParams = new PortfolioSearchParams
+                {
+                    IsPublic = false // 确保只返回未公开的作品集
+                };
+
+                var portfolios = await _portfolioService.GetRetoucherPortfoliosByRetoucherIdAsync(retoucherId, privateSearchParams);
+                return Ok(portfolios);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving private retoucher portfolios." });
             }
         }
 
