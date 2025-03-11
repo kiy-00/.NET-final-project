@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
-using PixelPerfect.Entities;
+using PixelPerfect.Core.Entities;
 using PixelPerfect.Services;
 using System.Security.Claims;
-using PixelPerfect.Models;
-using RegisterRequest = PixelPerfect.Models.RegisterRequest;
-using LoginRequest = PixelPerfect.Models.LoginRequest;
+using PixelPerfect.Core.Models;
+using RegisterRequest = PixelPerfect.Core.Models.RegisterRequest;
+using LoginRequest = PixelPerfect.Core.Models.LoginRequest;
 
 namespace PixelPerfect.Controllers
 {

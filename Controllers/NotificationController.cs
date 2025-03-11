@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PixelPerfect.Models;
+using PixelPerfect.Core.Models;
 using PixelPerfect.Services;
 using System;
 using System.ComponentModel.DataAnnotations;

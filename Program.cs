@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using PixelPerfect.Entities;
-using PixelPerfect.Repos;
+using PixelPerfect.Core.Entities;
+using PixelPerfect.DataAccess.Repos;
 using PixelPerfect.Services;
 using PixelPerfect.Services.Impl;
 using System.IO; // 用于文件和目录操作
