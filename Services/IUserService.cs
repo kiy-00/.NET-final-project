@@ -17,6 +17,10 @@ namespace PixelPerfect.Services
         Task<bool> AddUserRoleAsync(int userId, string roleType);
         Task<bool> RemoveUserRoleAsync(int userId, string roleType);
         Task<bool> HasRoleAsync(int userId, string roleType);
+
+        // 在 IUserService 中添加
+        Task<int?> GetRetoucherIdByUserIdAsync(int userId);
+        Task<int?> GetPhotographerIdByUserIdAsync(int userId);
         // 认证相关
         Task<(User? user, string token)> AuthenticateAsync(string usernameOrEmail, string password);
         Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword);

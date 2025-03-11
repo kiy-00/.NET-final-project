@@ -583,5 +583,61 @@ namespace PixelPerfect.Controllers
                 return StatusCode(500, new { message = "An error occurred while verifying retoucher." });
             }
         }
+
+
+        // 获取用户对应的修图师ID
+        [HttpGet("{userId}/retoucher-id")]
+        public async Task<IActionResult> GetRetoucherIdByUserId(int userId)
+        {
+            try
+            {
+                // 只允许当前用户或管理员查询
+                if (User.Identity.IsAuthenticated)
+                {
+                    var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                    if (currentUserId != userId && !User.IsInRole("Admin"))
+                        return StatusCode(403, new { message = "You are not authorized to access this information." });
+                }
+
+                var retoucherId = await _userService.GetRetoucherIdByUserIdAsync(userId);
+
+                if (retoucherId.HasValue)
+                    return Ok(new { retoucherId = retoucherId.Value });
+                else
+                    return NotFound(new { message = "User is not a retoucher." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving retoucher information." });
+            }
+        }
+
+        // 获取用户对应的摄影师ID
+        [HttpGet("{userId}/photographer-id")]
+        public async Task<IActionResult> GetPhotographerIdByUserId(int userId)
+        {
+            try
+            {
+                // 只允许当前用户或管理员查询
+                if (User.Identity.IsAuthenticated)
+                {
+                    var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                    if (currentUserId != userId && !User.IsInRole("Admin"))
+                        return StatusCode(403, new { message = "You are not authorized to access this information." });
+                }
+
+                var photographerId = await _userService.GetPhotographerIdByUserIdAsync(userId);
+
+                if (photographerId.HasValue)
+                    return Ok(new { photographerId = photographerId.Value });
+                else
+                    return NotFound(new { message = "User is not a photographer." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving photographer information." });
+            }
+        }
     }
+
 }

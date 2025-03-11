@@ -511,5 +511,40 @@ namespace PixelPerfect.Services.Impl
             var followingCount = await _userRepo.GetFollowingCountAsync(userId);
             return (followersCount, followingCount);
         }
+        // 根据用户ID获取修图师ID
+        public async Task<int?> GetRetoucherIdByUserIdAsync(int userId)
+        {
+            // 首先验证用户是否存在
+            var user = await _userRepo.GetByIdAsync(userId);
+            if (user == null)
+                return null;
+
+            // 检查用户是否具有修图师角色
+            var hasRetoucherRole = await HasRoleAsync(userId, "Retoucher");
+            if (!hasRetoucherRole)
+                return null;
+
+            // 获取用户对应的修图师信息
+            var retoucher = await _userRepo.GetRetoucherByUserIdAsync(userId);
+            return retoucher?.RetoucherId;
+        }
+
+        // 根据用户ID获取摄影师ID
+        public async Task<int?> GetPhotographerIdByUserIdAsync(int userId)
+        {
+            // 首先验证用户是否存在
+            var user = await _userRepo.GetByIdAsync(userId);
+            if (user == null)
+                return null;
+
+            // 检查用户是否具有摄影师角色
+            var hasPhotographerRole = await HasRoleAsync(userId, "Photographer");
+            if (!hasPhotographerRole)
+                return null;
+
+            // 获取用户对应的摄影师信息
+            var photographer = await _userRepo.GetPhotographerByUserIdAsync(userId);
+            return photographer?.PhotographerId;
+        }
     }
 }
