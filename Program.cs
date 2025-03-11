@@ -108,8 +108,14 @@ namespace PixelPerfect
                         services.AddScoped<NotificationRepo>();
                         services.AddScoped<INotificationService, NotificationService>();
 
-                        // Swagger配置
-                        services.AddSwaggerGen(c =>
+						// 注册社区功能相关服务
+						services.AddScoped<PostRepo>();
+					    services.AddScoped<LikeRepo>();
+						services.AddScoped<IPostService, PostService>();
+						services.AddScoped<ILikeService, LikeService>();
+
+						// Swagger配置
+						services.AddSwaggerGen(c =>
                         {
                             c.SwaggerDoc("v1", new OpenApiInfo { Title = "PixelPerfect API", Version = "v1" });
 
