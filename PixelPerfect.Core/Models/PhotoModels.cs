@@ -5,11 +5,14 @@ using System.Collections.Generic;
 namespace PixelPerfect.Core.Models
 {
     // 照片DTO
+    // PixelPerfect.Core/Models/PhotoModels.cs
     public class PhotoDto
     {
         public int PhotoId { get; set; }
         public int BookingId { get; set; }
         public string ImagePath { get; set; }
+        public string ImageUrl { get; set; } // 添加可直接访问的URL
+        public string ThumbnailUrl { get; set; } // 添加缩略图URL
         public string Title { get; set; }
         public string Description { get; set; }
         public string Metadata { get; set; }

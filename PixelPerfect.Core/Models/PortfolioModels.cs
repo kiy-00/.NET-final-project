@@ -31,11 +31,15 @@ namespace PixelPerfect.Core.Models
     }
 
     // 作品项DTO
+    // PixelPerfect.Core/Models/PortfolioModels.cs 中需要添加的 URL 字段
+
     public class PortfolioItemDto
     {
         public int ItemId { get; set; }
         public int PortfolioId { get; set; }
         public string ImagePath { get; set; }
+        public string ImageUrl { get; set; } // 新增：图片完整访问URL
+        public string ThumbnailUrl { get; set; } // 新增：缩略图URL
         public string Title { get; set; }
         public string Description { get; set; }
         public string Metadata { get; set; }
@@ -44,7 +48,6 @@ namespace PixelPerfect.Core.Models
         public int? AfterImageId { get; set; }
         public PortfolioItemDto AfterImage { get; set; }
     }
-
     // 创建作品集请求基类
     public abstract class CreatePortfolioBaseRequest
     {

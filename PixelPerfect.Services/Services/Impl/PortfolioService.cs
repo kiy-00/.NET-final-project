@@ -1,30 +1,35 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using PixelPerfect.Core.Entities;
 using PixelPerfect.Core.Models;
 using PixelPerfect.DataAccess.Repos;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace PixelPerfect.Services.Impl
 {
     public class PortfolioService : IPortfolioService
     {
-        private PhotoBookingDbContext _context;
+        private readonly PhotoBookingDbContext _context;
         private readonly PortfolioRepo _portfolioRepo;
-        private readonly IWebHostEnvironment _environment;
-        private readonly string _uploadDirectory;
+        private readonly IFileStorageService _fileStorage;
+        private readonly IConfiguration _config;
 
-        public PortfolioService(PhotoBookingDbContext context, PortfolioRepo portfolioRepo, IWebHostEnvironment environment)
+        public PortfolioService(
+            PhotoBookingDbContext context,
+            PortfolioRepo portfolioRepo,
+            IFileStorageService fileStorage,
+            IConfiguration config)
         {
             _context = context;
             _portfolioRepo = portfolioRepo;
-            _environment = environment;
-            _uploadDirectory = Path.Combine(_environment.WebRootPath, "uploads", "portfolio");
-
-            // 确保上传目录存在
-            if (!Directory.Exists(_uploadDirectory))
-                Directory.CreateDirectory(_uploadDirectory);
+            _fileStorage = fileStorage;
+            _config = config;
         }
 
         // 摄影师作品集方法
@@ -143,9 +148,25 @@ namespace PixelPerfect.Services.Impl
                 // 删除文件
                 if (!string.IsNullOrEmpty(item.ImagePath))
                 {
-                    var filePath = Path.Combine(_environment.WebRootPath, item.ImagePath.TrimStart('/'));
-                    if (File.Exists(filePath))
-                        File.Delete(filePath);
+                    await _fileStorage.DeleteFileAsync(item.ImagePath);
+
+                    // 尝试删除缩略图
+                    try
+                    {
+                        var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
+                        if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
+                        {
+                            string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
+                            if (!string.IsNullOrEmpty(thumbnailPath))
+                            {
+                                await _fileStorage.DeleteFileAsync(thumbnailPath);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // 忽略元数据解析错误
+                    }
                 }
 
                 await _portfolioRepo.DeletePortfolioItemAsync(item.ItemId);
@@ -271,9 +292,25 @@ namespace PixelPerfect.Services.Impl
                 // 删除文件
                 if (!string.IsNullOrEmpty(item.ImagePath))
                 {
-                    var filePath = Path.Combine(_environment.WebRootPath, item.ImagePath.TrimStart('/'));
-                    if (File.Exists(filePath))
-                        File.Delete(filePath);
+                    await _fileStorage.DeleteFileAsync(item.ImagePath);
+
+                    // 尝试删除缩略图
+                    try
+                    {
+                        var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
+                        if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
+                        {
+                            string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
+                            if (!string.IsNullOrEmpty(thumbnailPath))
+                            {
+                                await _fileStorage.DeleteFileAsync(thumbnailPath);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // 忽略元数据解析错误
+                    }
                 }
 
                 await _portfolioRepo.DeletePortfolioItemAsync(item.ItemId);
@@ -300,15 +337,16 @@ namespace PixelPerfect.Services.Impl
             if (portfolio == null)
                 throw new KeyNotFoundException($"Portfolio with ID {portfolioId} not found.");
 
-            // 保存文件
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-            var filePath = Path.Combine(_uploadDirectory, fileName);
-            var relativePath = $"/uploads/portfolio/{fileName}";
+            // 使用文件存储服务保存文件
+            string directory = $"portfolio/photographer/{portfolioId}";
+            string filePath = await _fileStorage.SaveFileAsync(file, directory);
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
+            // 生成缩略图
+            string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                filePath,
+                _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+            );
 
             // 创建元数据
             var metadata = new
@@ -316,6 +354,7 @@ namespace PixelPerfect.Services.Impl
                 OriginalFileName = file.FileName,
                 ContentType = file.ContentType,
                 Size = file.Length,
+                ThumbnailPath = thumbnailPath,
                 UploadedAt = DateTime.UtcNow
             };
 
@@ -323,7 +362,7 @@ namespace PixelPerfect.Services.Impl
             var item = new Portfolioitem
             {
                 PortfolioId = portfolioId,
-                ImagePath = relativePath,
+                ImagePath = filePath,
                 Title = request.Title,
                 Description = request.Description,
                 Metadata = JsonSerializer.Serialize(metadata),
@@ -348,15 +387,16 @@ namespace PixelPerfect.Services.Impl
             if (portfolio == null)
                 throw new KeyNotFoundException($"Portfolio with ID {portfolioId} not found.");
 
-            // 保存文件
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-            var filePath = Path.Combine(_uploadDirectory, fileName);
-            var relativePath = $"/uploads/portfolio/{fileName}";
+            // 使用文件存储服务保存文件
+            string directory = $"portfolio/retoucher/{portfolioId}";
+            string filePath = await _fileStorage.SaveFileAsync(file, directory);
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
+            // 生成缩略图
+            string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                filePath,
+                _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+            );
 
             // 创建元数据
             var metadata = new
@@ -364,6 +404,7 @@ namespace PixelPerfect.Services.Impl
                 OriginalFileName = file.FileName,
                 ContentType = file.ContentType,
                 Size = file.Length,
+                ThumbnailPath = thumbnailPath,
                 UploadedAt = DateTime.UtcNow
             };
 
@@ -371,7 +412,7 @@ namespace PixelPerfect.Services.Impl
             var item = new Portfolioitem
             {
                 PortfolioId = portfolioId,
-                ImagePath = relativePath,
+                ImagePath = filePath,
                 Title = request.Title,
                 Description = request.Description,
                 Metadata = JsonSerializer.Serialize(metadata),
@@ -420,9 +461,25 @@ namespace PixelPerfect.Services.Impl
             // 删除文件
             if (!string.IsNullOrEmpty(item.ImagePath))
             {
-                var filePath = Path.Combine(_environment.WebRootPath, item.ImagePath.TrimStart('/'));
-                if (File.Exists(filePath))
-                    File.Delete(filePath);
+                await _fileStorage.DeleteFileAsync(item.ImagePath);
+
+                // 尝试删除缩略图
+                try
+                {
+                    var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
+                    if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
+                    {
+                        string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
+                        if (!string.IsNullOrEmpty(thumbnailPath))
+                        {
+                            await _fileStorage.DeleteFileAsync(thumbnailPath);
+                        }
+                    }
+                }
+                catch
+                {
+                    // 忽略元数据解析错误
+                }
             }
 
             return await _portfolioRepo.DeletePortfolioItemAsync(itemId);
@@ -465,11 +522,12 @@ namespace PixelPerfect.Services.Impl
 
         private PortfolioItemDto MapToPortfolioItemDto(Portfolioitem item)
         {
-            return new PortfolioItemDto
+            var dto = new PortfolioItemDto
             {
                 ItemId = item.ItemId,
                 PortfolioId = item.PortfolioId,
                 ImagePath = item.ImagePath,
+                ImageUrl = _fileStorage.GetFileUrl(item.ImagePath),
                 Title = item.Title,
                 Description = item.Description,
                 Metadata = item.Metadata,
@@ -478,6 +536,26 @@ namespace PixelPerfect.Services.Impl
                 AfterImageId = item.AfterImageId,
                 AfterImage = item.AfterImage != null ? MapToPortfolioItemDto(item.AfterImage) : null
             };
+
+            // 尝试从元数据中获取缩略图URL
+            try
+            {
+                var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
+                if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
+                {
+                    string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
+                    if (!string.IsNullOrEmpty(thumbnailPath))
+                    {
+                        dto.ThumbnailUrl = _fileStorage.GetFileUrl(thumbnailPath);
+                    }
+                }
+            }
+            catch
+            {
+                // 忽略元数据解析错误
+            }
+
+            return dto;
         }
     }
 }

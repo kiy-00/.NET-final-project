@@ -1,35 +1,37 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using PixelPerfect.Core.Entities;
 using PixelPerfect.Core.Models;
 using PixelPerfect.DataAccess.Repos;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace PixelPerfect.Services.Impl
 {
     public class PhotoService : IPhotoService
     {
-        private PhotoBookingDbContext _context;
+        private readonly PhotoBookingDbContext _context;
         private readonly PhotoRepo _photoRepo;
         private readonly BookingRepo _bookingRepo;
-        private readonly IWebHostEnvironment _hostEnvironment;
-        private readonly string _uploadDirectory;
+        private readonly IFileStorageService _fileStorage;
+        private readonly IConfiguration _config;
 
         public PhotoService(
            PhotoBookingDbContext context,
             PhotoRepo photoRepo,
             BookingRepo bookingRepo,
-            IWebHostEnvironment hostEnvironment)
+            IFileStorageService fileStorage,
+            IConfiguration config)
         {
             _context = context;
             _photoRepo = photoRepo;
             _bookingRepo = bookingRepo;
-            _hostEnvironment = hostEnvironment;
-            _uploadDirectory = Path.Combine(_hostEnvironment.WebRootPath, "uploads", "photos");
-
-            // 确保目录存在
-            if (!Directory.Exists(_uploadDirectory))
-                Directory.CreateDirectory(_uploadDirectory);
+            _fileStorage = fileStorage;
+            _config = config;
         }
 
         public async Task<PhotoDto> GetPhotoByIdAsync(int photoId)
@@ -101,21 +103,16 @@ namespace PixelPerfect.Services.Impl
             if (booking.PhotographerId != photographerId)
                 throw new UnauthorizedAccessException("You are not the photographer for this booking.");
 
-            // 验证文件类型
-            string[] allowedExtensions = { ".jpg", ".jpeg", ".png" };
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (!allowedExtensions.Contains(extension))
-                throw new ArgumentException("Invalid file type. Only jpg, jpeg and png files are allowed.");
+            // 使用文件存储服务保存文件
+            string directory = $"photos/{request.BookingId}";
+            string filePath = await _fileStorage.SaveFileAsync(file, directory);
 
-            // 创建唯一文件名
-            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
-            var filePath = Path.Combine(_uploadDirectory, uniqueFileName);
-
-            // 保存文件
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(fileStream);
-            }
+            // 生成缩略图
+            string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                filePath,
+                _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+            );
 
             // 提取元数据
             var metadata = new
@@ -123,6 +120,7 @@ namespace PixelPerfect.Services.Impl
                 OriginalName = file.FileName,
                 Size = file.Length,
                 ContentType = file.ContentType,
+                ThumbnailPath = thumbnailPath,
                 UploadedAt = DateTime.UtcNow
             };
 
@@ -130,7 +128,7 @@ namespace PixelPerfect.Services.Impl
             var newPhoto = new Photo
             {
                 BookingId = request.BookingId,
-                ImagePath = $"/uploads/photos/{uniqueFileName}",
+                ImagePath = filePath,
                 Title = request.Title,
                 Description = request.Description,
                 Metadata = JsonSerializer.Serialize(metadata),
@@ -155,26 +153,21 @@ namespace PixelPerfect.Services.Impl
                 throw new UnauthorizedAccessException("You are not the photographer for this booking.");
 
             var uploadedPhotos = new List<PhotoDto>();
+            string directory = $"photos/{request.BookingId}";
 
             foreach (var file in files)
             {
                 try
                 {
-                    // 验证文件类型
-                    string[] allowedExtensions = { ".jpg", ".jpeg", ".png" };
-                    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-                    if (!allowedExtensions.Contains(extension))
-                        continue; // 跳过无效文件类型
+                    // 使用文件存储服务保存文件
+                    string filePath = await _fileStorage.SaveFileAsync(file, directory);
 
-                    // 创建唯一文件名
-                    var uniqueFileName = $"{Guid.NewGuid()}{extension}";
-                    var filePath = Path.Combine(_uploadDirectory, uniqueFileName);
-
-                    // 保存文件
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await file.CopyToAsync(fileStream);
-                    }
+                    // 生成缩略图
+                    string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                        filePath,
+                        _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                        _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+                    );
 
                     // 提取元数据
                     var metadata = new
@@ -182,6 +175,7 @@ namespace PixelPerfect.Services.Impl
                         OriginalName = file.FileName,
                         Size = file.Length,
                         ContentType = file.ContentType,
+                        ThumbnailPath = thumbnailPath,
                         UploadedAt = DateTime.UtcNow
                     };
 
@@ -189,7 +183,7 @@ namespace PixelPerfect.Services.Impl
                     var newPhoto = new Photo
                     {
                         BookingId = request.BookingId,
-                        ImagePath = $"/uploads/photos/{uniqueFileName}",
+                        ImagePath = filePath,
                         Title = Path.GetFileNameWithoutExtension(file.FileName),
                         Description = $"Uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
                         Metadata = JsonSerializer.Serialize(metadata),
@@ -201,8 +195,10 @@ namespace PixelPerfect.Services.Impl
                     var createdPhoto = await _photoRepo.CreateAsync(newPhoto);
                     uploadedPhotos.Add(MapToDto(createdPhoto));
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // 记录错误
+                    Console.WriteLine($"上传文件失败: {ex.Message}");
                     // 跳过处理失败的文件
                     continue;
                 }
@@ -249,9 +245,25 @@ namespace PixelPerfect.Services.Impl
             // 删除物理文件
             try
             {
-                var filePath = Path.Combine(_hostEnvironment.WebRootPath, photo.ImagePath.TrimStart('/'));
-                if (File.Exists(filePath))
-                    File.Delete(filePath);
+                await _fileStorage.DeleteFileAsync(photo.ImagePath);
+
+                // 尝试解析元数据删除缩略图
+                try
+                {
+                    var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(photo.Metadata);
+                    if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
+                    {
+                        string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
+                        if (!string.IsNullOrEmpty(thumbnailPath))
+                        {
+                            await _fileStorage.DeleteFileAsync(thumbnailPath);
+                        }
+                    }
+                }
+                catch
+                {
+                    // 忽略元数据解析错误
+                }
             }
             catch
             {
@@ -294,11 +306,12 @@ namespace PixelPerfect.Services.Impl
         // 辅助方法 - 实体映射到DTO
         private PhotoDto MapToDto(Photo photo)
         {
-            return new PhotoDto
+            var dto = new PhotoDto
             {
                 PhotoId = photo.PhotoId,
                 BookingId = photo.BookingId,
                 ImagePath = photo.ImagePath,
+                ImageUrl = _fileStorage.GetFileUrl(photo.ImagePath),
                 Title = photo.Title,
                 Description = photo.Description,
                 Metadata = photo.Metadata,
@@ -306,6 +319,26 @@ namespace PixelPerfect.Services.Impl
                 IsPublic = photo.IsPublic,
                 ClientApproved = photo.ClientApproved
             };
+
+            // 尝试从元数据中获取缩略图URL
+            try
+            {
+                var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(photo.Metadata);
+                if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
+                {
+                    string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
+                    if (!string.IsNullOrEmpty(thumbnailPath))
+                    {
+                        dto.ThumbnailUrl = _fileStorage.GetFileUrl(thumbnailPath);
+                    }
+                }
+            }
+            catch
+            {
+                // 忽略元数据解析错误
+            }
+
+            return dto;
         }
     }
 }
