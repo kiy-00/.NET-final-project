@@ -3,7 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PixelPerfect.Core.Models;
 using PixelPerfect.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace PixelPerfect.Controllers
 {
@@ -13,11 +18,16 @@ namespace PixelPerfect.Controllers
     {
         private readonly IPortfolioService _portfolioService;
         private readonly IPhotographerService _photographerService;
+        private readonly IFileStorageService _fileStorage;
 
-        public PhotographerPortfolioController(IPortfolioService portfolioService, IPhotographerService photographerService)
+        public PhotographerPortfolioController(
+            IPortfolioService portfolioService,
+            IPhotographerService photographerService,
+            IFileStorageService fileStorage)
         {
             _portfolioService = portfolioService;
             _photographerService = photographerService;
+            _fileStorage = fileStorage;
         }
 
         // 获取所有公开作品集
@@ -280,7 +290,92 @@ namespace PixelPerfect.Controllers
             }
         }
 
-        // 上传作品项（照片）
+        // 上传作品集封面
+        [Authorize]
+        [HttpPost("{portfolioId}/cover")]
+        public async Task<IActionResult> UploadPortfolioCover(int portfolioId, IFormFile file)
+        {
+            if (file == null)
+                return BadRequest(new { message = "No file uploaded." });
+
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 检查是否是作品集所有者
+                var portfolio = await _portfolioService.GetPhotographerPortfolioByIdAsync(portfolioId);
+                if (portfolio == null)
+                    return NotFound(new { message = $"Portfolio with ID {portfolioId} not found." });
+
+                var photographer = await _photographerService.GetPhotographerByIdAsync(portfolio.PhotographerId);
+                if (photographer == null || photographer.UserId != userId)
+                    return Forbid();
+
+                // 上传封面图片
+                var coverItem = await _portfolioService.SetPhotographerPortfolioCoverAsync(portfolioId, file);
+
+                return Ok(new
+                {
+                    message = "Portfolio cover uploaded successfully.",
+                    coverUrl = coverItem.ImageUrl,
+                    thumbnailUrl = coverItem.ThumbnailUrl,
+                    itemId = coverItem.ItemId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while uploading portfolio cover." });
+            }
+        }
+
+        // 批量上传作品项（照片）
+        [Authorize]
+        [HttpPost("{portfolioId}/items/batch")]
+        public async Task<IActionResult> BatchUploadPortfolioItems(int portfolioId, [FromForm] BatchPortfolioItemUploadRequest request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 检查是否是作品集所有者
+                var portfolio = await _portfolioService.GetPhotographerPortfolioByIdAsync(portfolioId);
+                if (portfolio == null)
+                    return NotFound(new { message = $"Portfolio with ID {portfolioId} not found." });
+
+                var photographer = await _photographerService.GetPhotographerByIdAsync(portfolio.PhotographerId);
+                if (photographer == null || photographer.UserId != userId)
+                    return Forbid();
+
+                // 检查是否有文件上传
+                if (Request.Form.Files.Count == 0)
+                    return BadRequest(new { message = "No files uploaded." });
+
+                var uploadedItems = await _portfolioService.BatchAddPhotographerPortfolioItemsAsync(
+                    portfolioId,
+                    Request.Form.Files,
+                    request
+                );
+
+                return Ok(new
+                {
+                    message = $"Successfully uploaded {uploadedItems.Count} items.",
+                    items = uploadedItems.Select(item => new
+                    {
+                        itemId = item.ItemId,
+                        imageUrl = item.ImageUrl,
+                        thumbnailUrl = item.ThumbnailUrl,
+                        title = item.Title
+                    })
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while batch uploading portfolio items." });
+            }
+        }
+
+        // 上传作品项（照片）- 保留原有方法，但标记为已过时
+        [Obsolete("Use /items/batch for batch uploads")]
         [Authorize]
         [HttpPost("{portfolioId}/items")]
         public async Task<IActionResult> UploadPortfolioItem(int portfolioId, [FromForm] UploadPortfolioItemRequest request)

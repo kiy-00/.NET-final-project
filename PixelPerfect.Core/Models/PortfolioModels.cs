@@ -1,5 +1,8 @@
 ﻿// Models/PortfolioModels.cs
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace PixelPerfect.Core.Models
 {
@@ -13,6 +16,8 @@ namespace PixelPerfect.Core.Models
         public bool IsPublic { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public string CoverImageUrl { get; set; } // 新增：封面图片URL
+        public string CoverThumbnailUrl { get; set; } // 新增：封面缩略图URL
         public List<PortfolioItemDto> Items { get; set; } = new List<PortfolioItemDto>();
     }
 
@@ -31,15 +36,13 @@ namespace PixelPerfect.Core.Models
     }
 
     // 作品项DTO
-    // PixelPerfect.Core/Models/PortfolioModels.cs 中需要添加的 URL 字段
-
     public class PortfolioItemDto
     {
         public int ItemId { get; set; }
         public int PortfolioId { get; set; }
         public string ImagePath { get; set; }
-        public string ImageUrl { get; set; } // 新增：图片完整访问URL
-        public string ThumbnailUrl { get; set; } // 新增：缩略图URL
+        public string ImageUrl { get; set; } // 图片完整访问URL
+        public string ThumbnailUrl { get; set; } // 缩略图URL
         public string Title { get; set; }
         public string Description { get; set; }
         public string Metadata { get; set; }
@@ -47,7 +50,17 @@ namespace PixelPerfect.Core.Models
         public bool IsBeforeImage { get; set; }
         public int? AfterImageId { get; set; }
         public PortfolioItemDto AfterImage { get; set; }
+
+        // 新增：标识是否为作品集封面
+        public bool IsPortfolioCover { get; set; }
+
+        // 新增：用于修图前后对比的字段
+        public string BeforeImageUrl { get; set; }
+        public string BeforeThumbnailUrl { get; set; }
+        public string AfterImageUrl { get; set; }
+        public string AfterThumbnailUrl { get; set; }
     }
+
     // 创建作品集请求基类
     public abstract class CreatePortfolioBaseRequest
     {
@@ -100,6 +113,36 @@ namespace PixelPerfect.Core.Models
         public bool IsBeforeImage { get; set; } = false;
 
         public int? AfterImageId { get; set; }
+
+        // 新增：文件路径字段（用于内部服务调用）
+        public string FilePath { get; set; }
+
+        // 新增：元数据字段（用于内部服务调用）
+        public string Metadata { get; set; }
+
+        // 新增：标识是否为作品集封面
+        public bool IsPortfolioCover { get; set; } = false;
+    }
+
+    // 新增：上传修图师作品项请求（支持前后对比）
+    public class UploadRetoucherPortfolioItemRequest
+    {
+        [StringLength(100)]
+        public string Title { get; set; }
+
+        [StringLength(500)]
+        public string Description { get; set; }
+
+        // 注意：前端表单中需要包含 IFormFile afterImage 和可选的 IFormFile beforeImage
+    }
+
+    // 新增：批量上传作品项请求
+    public class BatchPortfolioItemUploadRequest
+    {
+        [StringLength(500)]
+        public string Description { get; set; }
+
+        // 注意：前端表单中会包含多个 IFormFile 文件
     }
 
     // 更新作品项请求

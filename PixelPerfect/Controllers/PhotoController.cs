@@ -308,6 +308,8 @@ namespace PixelPerfect.Controllers
             }
         }
 
+        //下面的这些接口可能都用不了，因为BookId不能为null
+
         // 通用单张图片上传接口
         [HttpPost("upload/general")]
         [Authorize]

@@ -32,7 +32,8 @@ namespace PixelPerfect.Services.Impl
             _config = config;
         }
 
-        // 摄影师作品集方法
+        #region 摄影师作品集方法
+
         public async Task<List<PhotographerPortfolioDto>> GetAllPhotographerPortfoliosAsync(PortfolioSearchParams searchParams)
         {
             var query = _context.Photographerportfolios
@@ -55,7 +56,20 @@ namespace PixelPerfect.Services.Impl
                     (p.Description != null && p.Description.Contains(searchParams.Keyword)));
 
             var portfolios = await query.ToListAsync();
-            return portfolios.Select(MapToPhotographerPortfolioDto).ToList();
+            var dtos = portfolios.Select(MapToPhotographerPortfolioDto).ToList();
+
+            // 查找并设置每个作品集的封面
+            foreach (var dto in dtos)
+            {
+                var cover = await GetPortfolioCoverAsync(dto.PortfolioId, false);
+                if (cover != null)
+                {
+                    dto.CoverImageUrl = cover.ImageUrl;
+                    dto.CoverThumbnailUrl = cover.ThumbnailUrl;
+                }
+            }
+
+            return dtos;
         }
 
         public async Task<List<PhotographerPortfolioDto>> GetPhotographerPortfoliosByPhotographerIdAsync(int photographerId, PortfolioSearchParams searchParams)
@@ -80,7 +94,20 @@ namespace PixelPerfect.Services.Impl
                     (p.Description != null && p.Description.Contains(searchParams.Keyword)));
 
             var portfolios = await query.ToListAsync();
-            return portfolios.Select(MapToPhotographerPortfolioDto).ToList();
+            var dtos = portfolios.Select(MapToPhotographerPortfolioDto).ToList();
+
+            // 查找并设置每个作品集的封面
+            foreach (var dto in dtos)
+            {
+                var cover = await GetPortfolioCoverAsync(dto.PortfolioId, false);
+                if (cover != null)
+                {
+                    dto.CoverImageUrl = cover.ImageUrl;
+                    dto.CoverThumbnailUrl = cover.ThumbnailUrl;
+                }
+            }
+
+            return dtos;
         }
 
         public async Task<PhotographerPortfolioDto> GetPhotographerPortfolioByIdAsync(int portfolioId)
@@ -89,7 +116,17 @@ namespace PixelPerfect.Services.Impl
             if (portfolio == null)
                 return null;
 
-            return MapToPhotographerPortfolioDto(portfolio);
+            var dto = MapToPhotographerPortfolioDto(portfolio);
+
+            // 查找并设置作品集封面
+            var cover = await GetPortfolioCoverAsync(portfolioId, false);
+            if (cover != null)
+            {
+                dto.CoverImageUrl = cover.ImageUrl;
+                dto.CoverThumbnailUrl = cover.ThumbnailUrl;
+            }
+
+            return dto;
         }
 
         public async Task<PhotographerPortfolioDto> CreatePhotographerPortfolioAsync(int photographerId, CreatePhotographerPortfolioRequest request)
@@ -176,7 +213,10 @@ namespace PixelPerfect.Services.Impl
             return await _portfolioRepo.DeletePhotographerPortfolioAsync(portfolioId);
         }
 
-        // 修图师作品集方法
+        #endregion
+
+        #region 修图师作品集方法
+
         public async Task<List<RetoucherPortfolioDto>> GetAllRetoucherPortfoliosAsync(PortfolioSearchParams searchParams)
         {
             var query = _context.Retoucherportfolios
@@ -199,7 +239,20 @@ namespace PixelPerfect.Services.Impl
                     (p.Description != null && p.Description.Contains(searchParams.Keyword)));
 
             var portfolios = await query.ToListAsync();
-            return portfolios.Select(MapToRetoucherPortfolioDto).ToList();
+            var dtos = portfolios.Select(MapToRetoucherPortfolioDto).ToList();
+
+            // 查找并设置每个作品集的封面
+            foreach (var dto in dtos)
+            {
+                var cover = await GetPortfolioCoverAsync(dto.PortfolioId, true);
+                if (cover != null)
+                {
+                    dto.CoverImageUrl = cover.ImageUrl;
+                    dto.CoverThumbnailUrl = cover.ThumbnailUrl;
+                }
+            }
+
+            return dtos;
         }
 
         public async Task<List<RetoucherPortfolioDto>> GetRetoucherPortfoliosByRetoucherIdAsync(int retoucherId, PortfolioSearchParams searchParams)
@@ -224,7 +277,20 @@ namespace PixelPerfect.Services.Impl
                     (p.Description != null && p.Description.Contains(searchParams.Keyword)));
 
             var portfolios = await query.ToListAsync();
-            return portfolios.Select(MapToRetoucherPortfolioDto).ToList();
+            var dtos = portfolios.Select(MapToRetoucherPortfolioDto).ToList();
+
+            // 查找并设置每个作品集的封面
+            foreach (var dto in dtos)
+            {
+                var cover = await GetPortfolioCoverAsync(dto.PortfolioId, true);
+                if (cover != null)
+                {
+                    dto.CoverImageUrl = cover.ImageUrl;
+                    dto.CoverThumbnailUrl = cover.ThumbnailUrl;
+                }
+            }
+
+            return dtos;
         }
 
         public async Task<RetoucherPortfolioDto> GetRetoucherPortfolioByIdAsync(int portfolioId)
@@ -233,7 +299,17 @@ namespace PixelPerfect.Services.Impl
             if (portfolio == null)
                 return null;
 
-            return MapToRetoucherPortfolioDto(portfolio);
+            var dto = MapToRetoucherPortfolioDto(portfolio);
+
+            // 查找并设置作品集封面
+            var cover = await GetPortfolioCoverAsync(portfolioId, true);
+            if (cover != null)
+            {
+                dto.CoverImageUrl = cover.ImageUrl;
+                dto.CoverThumbnailUrl = cover.ThumbnailUrl;
+            }
+
+            return dto;
         }
 
         public async Task<RetoucherPortfolioDto> CreateRetoucherPortfolioAsync(int retoucherId, CreateRetoucherPortfolioRequest request)
@@ -320,7 +396,10 @@ namespace PixelPerfect.Services.Impl
             return await _portfolioRepo.DeleteRetoucherPortfolioAsync(portfolioId);
         }
 
-        // 作品项方法
+        #endregion
+
+        #region 作品项方法
+
         public async Task<PortfolioItemDto> GetPortfolioItemByIdAsync(int itemId)
         {
             var item = await _portfolioRepo.GetPortfolioItemByIdAsync(itemId);
@@ -355,7 +434,8 @@ namespace PixelPerfect.Services.Impl
                 ContentType = file.ContentType,
                 Size = file.Length,
                 ThumbnailPath = thumbnailPath,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                IsPortfolioCover = request.IsPortfolioCover
             };
 
             // 创建作品项
@@ -405,7 +485,8 @@ namespace PixelPerfect.Services.Impl
                 ContentType = file.ContentType,
                 Size = file.Length,
                 ThumbnailPath = thumbnailPath,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                IsPortfolioCover = request.IsPortfolioCover
             };
 
             // 创建作品项
@@ -485,7 +566,477 @@ namespace PixelPerfect.Services.Impl
             return await _portfolioRepo.DeletePortfolioItemAsync(itemId);
         }
 
-        // 辅助方法 - 实体映射到DTO
+        #endregion
+
+        #region 新增方法 - 封面相关
+
+        public async Task<PortfolioItemDto> SetPhotographerPortfolioCoverAsync(int portfolioId, IFormFile file)
+        {
+            // 验证作品集是否存在
+            var portfolio = await _portfolioRepo.GetPhotographerPortfolioByIdAsync(portfolioId);
+            if (portfolio == null)
+                throw new KeyNotFoundException($"Portfolio with ID {portfolioId} not found.");
+
+            // 检查是否已有封面，如果有则删除
+            var existingCover = await GetPortfolioCoverAsync(portfolioId, false);
+            if (existingCover != null)
+            {
+                await DeletePortfolioItemAsync(existingCover.ItemId);
+            }
+
+            // 使用文件存储服务保存文件
+            string directory = $"portfolio/photographer/{portfolioId}/cover";
+            string filePath = await _fileStorage.SaveFileAsync(file, directory);
+
+            // 生成缩略图
+            string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                filePath,
+                _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+            );
+
+            // 创建元数据
+            var metadata = new
+            {
+                OriginalFileName = file.FileName,
+                ContentType = file.ContentType,
+                Size = file.Length,
+                ThumbnailPath = thumbnailPath,
+                UploadedAt = DateTime.UtcNow,
+                IsPortfolioCover = true
+            };
+
+            // 创建作品项作为封面
+            var item = new Portfolioitem
+            {
+                PortfolioId = portfolioId,
+                ImagePath = filePath,
+                Title = "Cover Image",
+                Description = "Portfolio Cover Image",
+                Metadata = JsonSerializer.Serialize(metadata),
+                CreatedAt = DateTime.UtcNow,
+                IsBeforeImage = false,
+                AfterImageId = null
+            };
+
+            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+
+            // 更新作品集的最后修改时间
+            portfolio.UpdatedAt = DateTime.UtcNow;
+            await _portfolioRepo.UpdatePhotographerPortfolioAsync(portfolio);
+
+            return MapToPortfolioItemDto(createdItem);
+        }
+
+        public async Task<PortfolioItemDto> SetRetoucherPortfolioCoverAsync(int portfolioId, IFormFile file)
+        {
+            // 验证作品集是否存在
+            var portfolio = await _portfolioRepo.GetRetoucherPortfolioByIdAsync(portfolioId);
+            if (portfolio == null)
+                throw new KeyNotFoundException($"Portfolio with ID {portfolioId} not found.");
+
+            // 检查是否已有封面，如果有则删除
+            var existingCover = await GetPortfolioCoverAsync(portfolioId, true);
+            if (existingCover != null)
+            {
+                await DeletePortfolioItemAsync(existingCover.ItemId);
+            }
+
+            // 使用文件存储服务保存文件
+            string directory = $"portfolio/retoucher/{portfolioId}/cover";
+            string filePath = await _fileStorage.SaveFileAsync(file, directory);
+
+            // 生成缩略图
+            string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                filePath,
+                _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+            );
+
+            // 创建元数据
+            var metadata = new
+            {
+                OriginalFileName = file.FileName,
+                ContentType = file.ContentType,
+                Size = file.Length,
+                ThumbnailPath = thumbnailPath,
+                UploadedAt = DateTime.UtcNow,
+                IsPortfolioCover = true
+            };
+
+            // 创建作品项作为封面
+            var item = new Portfolioitem
+            {
+                PortfolioId = portfolioId,
+                ImagePath = filePath,
+                Title = "Cover Image",
+                Description = "Portfolio Cover Image",
+                Metadata = JsonSerializer.Serialize(metadata),
+                CreatedAt = DateTime.UtcNow,
+                IsBeforeImage = false,
+                AfterImageId = null
+            };
+
+            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+
+            // 更新作品集的最后修改时间
+            portfolio.UpdatedAt = DateTime.UtcNow;
+            await _portfolioRepo.UpdateRetoucherPortfolioAsync(portfolio);
+
+            return MapToPortfolioItemDto(createdItem);
+        }
+
+        public async Task<PortfolioItemDto> GetPortfolioCoverAsync(int portfolioId, bool isRetoucherPortfolio)
+        {
+            // 查询具有封面标记的作品项
+            var items = await _portfolioRepo.GetPortfolioitemsByPortfolioIdAsync(portfolioId);
+            if (items == null || !items.Any())
+                return null;
+
+            foreach (var item in items)
+            {
+                try
+                {
+                    if (!string.IsNullOrEmpty(item.Metadata))
+                    {
+                        var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
+                        if (metadataObj != null &&
+                            metadataObj.ContainsKey("IsPortfolioCover") &&
+                            metadataObj["IsPortfolioCover"].GetBoolean())
+                        {
+                            return MapToPortfolioItemDto(item);
+                        }
+                    }
+                }
+                catch
+                {
+                    // 忽略元数据解析错误
+                    continue;
+                }
+            }
+
+            // 如果没有找到封面，则返回第一个作品项作为默认封面
+            return items.Any() ? MapToPortfolioItemDto(items.First()) : null;
+        }
+
+        #endregion
+
+        #region 新增方法 - 修图前后对比相关
+
+        public async Task<PortfolioItemDto> AddRetoucherPortfolioItemWithBeforeAfterAsync(
+            int portfolioId,
+            IFormFile afterImage,
+            IFormFile beforeImage,
+            UploadRetoucherPortfolioItemRequest request)
+        {
+            // 验证作品集是否存在
+            var portfolio = await _portfolioRepo.GetRetoucherPortfolioByIdAsync(portfolioId);
+            if (portfolio == null)
+                throw new KeyNotFoundException($"Portfolio with ID {portfolioId} not found.");
+
+            // 确保两个图片都有提供
+            if (afterImage == null)
+                throw new ArgumentNullException(nameof(afterImage), "After image is required");
+
+            // 设置目录
+            string directory = $"portfolio/retoucher/{portfolioId}/before-after";
+
+            Portfolioitem beforeItem = null;
+
+            // 如果有修图前图片，先处理它
+            if (beforeImage != null)
+            {
+                // 保存修图前图片
+                string beforeFilePath = await _fileStorage.SaveFileAsync(beforeImage, directory, $"before_{Guid.NewGuid()}");
+                string beforeThumbnailPath = await _fileStorage.GenerateThumbnailAsync(beforeFilePath);
+
+                // 创建修图前的元数据
+                var beforeMetadata = new
+                {
+                    OriginalFileName = beforeImage.FileName,
+                    ContentType = beforeImage.ContentType,
+                    Size = beforeImage.Length,
+                    ThumbnailPath = beforeThumbnailPath,
+                    UploadedAt = DateTime.UtcNow,
+                    IsBeforeAfterPair = true,
+                    IsBefore = true
+                };
+
+                // 创建修图前作品项
+                beforeItem = new Portfolioitem
+                {
+                    PortfolioId = portfolioId,
+                    ImagePath = beforeFilePath,
+                    Title = $"{request.Title} (Before)",
+                    Description = request.Description,
+                    Metadata = JsonSerializer.Serialize(beforeMetadata),
+                    CreatedAt = DateTime.UtcNow,
+                    IsBeforeImage = true
+                };
+
+                beforeItem = await _portfolioRepo.CreatePortfolioItemAsync(beforeItem);
+            }
+
+            // 保存修图后图片
+            string afterFilePath = await _fileStorage.SaveFileAsync(afterImage, directory, $"after_{Guid.NewGuid()}");
+            string afterThumbnailPath = await _fileStorage.GenerateThumbnailAsync(afterFilePath);
+
+            // 创建修图后的元数据
+            var afterMetadata = new
+            {
+                OriginalFileName = afterImage.FileName,
+                ContentType = afterImage.ContentType,
+                Size = afterImage.Length,
+                ThumbnailPath = afterThumbnailPath,
+                UploadedAt = DateTime.UtcNow,
+                IsBeforeAfterPair = beforeImage != null,
+                IsAfter = true,
+                BeforeItemId = beforeItem?.ItemId
+            };
+
+            // 创建修图后作品项
+            var afterItem = new Portfolioitem
+            {
+                PortfolioId = portfolioId,
+                ImagePath = afterFilePath,
+                Title = request.Title ?? "Retouched Image",
+                Description = request.Description,
+                Metadata = JsonSerializer.Serialize(afterMetadata),
+                CreatedAt = DateTime.UtcNow,
+                IsBeforeImage = false
+            };
+
+            var createdAfterItem = await _portfolioRepo.CreatePortfolioItemAsync(afterItem);
+
+            // 如果有修图前图片，更新关联关系
+            if (beforeItem != null)
+            {
+                beforeItem.AfterImageId = createdAfterItem.ItemId;
+                await _portfolioRepo.UpdatePortfolioItemAsync(beforeItem);
+            }
+
+            // 更新作品集的最后修改时间
+            portfolio.UpdatedAt = DateTime.UtcNow;
+            await _portfolioRepo.UpdateRetoucherPortfolioAsync(portfolio);
+
+            // 返回的是修图后的图片
+            var dto = MapToPortfolioItemDto(createdAfterItem);
+
+            // 如果有修图前图片，设置相关URL
+            if (beforeItem != null)
+            {
+                dto.BeforeImageUrl = _fileStorage.GetFileUrl(beforeItem.ImagePath);
+
+                try
+                {
+                    var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(beforeItem.Metadata);
+                    if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
+                    {
+                        string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
+                        if (!string.IsNullOrEmpty(thumbnailPath))
+                        {
+                            dto.BeforeThumbnailUrl = _fileStorage.GetFileUrl(thumbnailPath);
+                        }
+                    }
+                }
+                catch
+                {
+                    // 忽略元数据解析错误
+                }
+            }
+
+            return dto;
+        }
+
+        public async Task<(PortfolioItemDto Before, PortfolioItemDto After)> GetBeforeAfterImagesAsync(int itemId)
+        {
+            // 获取当前项
+            var item = await _portfolioRepo.GetPortfolioItemByIdAsync(itemId);
+            if (item == null)
+                throw new KeyNotFoundException($"Portfolio item with ID {itemId} not found.");
+
+            PortfolioItemDto beforeDto = null;
+            PortfolioItemDto afterDto = null;
+
+            // 如果当前项是修图前图片
+            if (item.IsBeforeImage == true && item.AfterImageId.HasValue)
+            {
+                beforeDto = MapToPortfolioItemDto(item);
+
+                // 获取关联的修图后图片
+                var afterItem = await _portfolioRepo.GetPortfolioItemByIdAsync(item.AfterImageId.Value);
+                if (afterItem != null)
+                {
+                    afterDto = MapToPortfolioItemDto(afterItem);
+                }
+            }
+            // 如果当前项是修图后图片
+            else
+            {
+                afterDto = MapToPortfolioItemDto(item);
+
+                // 查找关联的修图前图片
+                var beforeItems = await _context.Portfolioitems
+                    .Where(i => i.AfterImageId == itemId && i.IsBeforeImage == true)
+                    .ToListAsync();
+
+                if (beforeItems.Any())
+                {
+                    beforeDto = MapToPortfolioItemDto(beforeItems.First());
+                }
+            }
+
+            return (beforeDto, afterDto);
+        }
+
+        #endregion
+
+        #region 新增方法 - 批量上传
+
+        public async Task<List<PortfolioItemDto>> BatchAddPhotographerPortfolioItemsAsync(
+            int portfolioId,
+            IEnumerable<IFormFile> files,
+            BatchPortfolioItemUploadRequest request)
+        {
+            // 验证作品集是否存在
+            var portfolio = await _portfolioRepo.GetPhotographerPortfolioByIdAsync(portfolioId);
+            if (portfolio == null)
+                throw new KeyNotFoundException($"Portfolio with ID {portfolioId} not found.");
+
+            if (files == null || !files.Any())
+                throw new ArgumentException("No files provided", nameof(files));
+
+            var uploadedItems = new List<PortfolioItemDto>();
+            string directory = $"portfolio/photographer/{portfolioId}/batch";
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    // 保存文件
+                    string filePath = await _fileStorage.SaveFileAsync(file, directory);
+
+                    // 生成缩略图
+                    string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(filePath);
+
+                    // 生成文件标题（使用文件名，但移除扩展名）
+                    string title = Path.GetFileNameWithoutExtension(file.FileName);
+
+                    // 创建元数据
+                    var metadata = new
+                    {
+                        OriginalFileName = file.FileName,
+                        ContentType = file.ContentType,
+                        Size = file.Length,
+                        ThumbnailPath = thumbnailPath,
+                        UploadedAt = DateTime.UtcNow,
+                        BatchUpload = true
+                    };
+
+                    // 创建作品项
+                    var item = new Portfolioitem
+                    {
+                        PortfolioId = portfolioId,
+                        ImagePath = filePath,
+                        Title = title,
+                        Description = request.Description,
+                        Metadata = JsonSerializer.Serialize(metadata),
+                        CreatedAt = DateTime.UtcNow,
+                        IsBeforeImage = false,
+                        AfterImageId = null
+                    };
+
+                    var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+                    uploadedItems.Add(MapToPortfolioItemDto(createdItem));
+                }
+                catch (Exception ex)
+                {
+                    // 记录错误但继续处理下一个文件
+                    Console.WriteLine($"Error uploading file {file.FileName}: {ex.Message}");
+                }
+            }
+
+            // 更新作品集的最后修改时间
+            portfolio.UpdatedAt = DateTime.UtcNow;
+            await _portfolioRepo.UpdatePhotographerPortfolioAsync(portfolio);
+
+            return uploadedItems;
+        }
+
+        public async Task<List<PortfolioItemDto>> BatchAddRetoucherPortfolioItemsAsync(
+            int portfolioId,
+            IEnumerable<IFormFile> files,
+            BatchPortfolioItemUploadRequest request)
+        {
+            // 验证作品集是否存在
+            var portfolio = await _portfolioRepo.GetRetoucherPortfolioByIdAsync(portfolioId);
+            if (portfolio == null)
+                throw new KeyNotFoundException($"Portfolio with ID {portfolioId} not found.");
+
+            if (files == null || !files.Any())
+                throw new ArgumentException("No files provided", nameof(files));
+
+            var uploadedItems = new List<PortfolioItemDto>();
+            string directory = $"portfolio/retoucher/{portfolioId}/batch";
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    // 保存文件
+                    string filePath = await _fileStorage.SaveFileAsync(file, directory);
+
+                    // 生成缩略图
+                    string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(filePath);
+
+                    // 生成文件标题（使用文件名，但移除扩展名）
+                    string title = Path.GetFileNameWithoutExtension(file.FileName);
+
+                    // 创建元数据
+                    var metadata = new
+                    {
+                        OriginalFileName = file.FileName,
+                        ContentType = file.ContentType,
+                        Size = file.Length,
+                        ThumbnailPath = thumbnailPath,
+                        UploadedAt = DateTime.UtcNow,
+                        BatchUpload = true
+                    };
+
+                    // 创建作品项
+                    var item = new Portfolioitem
+                    {
+                        PortfolioId = portfolioId,
+                        ImagePath = filePath,
+                        Title = title,
+                        Description = request.Description,
+                        Metadata = JsonSerializer.Serialize(metadata),
+                        CreatedAt = DateTime.UtcNow,
+                        IsBeforeImage = false,
+                        AfterImageId = null
+                    };
+
+                    var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+                    uploadedItems.Add(MapToPortfolioItemDto(createdItem));
+                }
+                catch (Exception ex)
+                {
+                    // 记录错误但继续处理下一个文件
+                    Console.WriteLine($"Error uploading file {file.FileName}: {ex.Message}");
+                }
+            }
+
+            // 更新作品集的最后修改时间
+            portfolio.UpdatedAt = DateTime.UtcNow;
+            await _portfolioRepo.UpdateRetoucherPortfolioAsync(portfolio);
+
+            return uploadedItems;
+        }
+
+        #endregion
+
+        #region 辅助方法 - 实体映射到DTO
+
         private PhotographerPortfolioDto MapToPhotographerPortfolioDto(Photographerportfolio portfolio)
         {
             return new PhotographerPortfolioDto
@@ -532,21 +1083,94 @@ namespace PixelPerfect.Services.Impl
                 Description = item.Description,
                 Metadata = item.Metadata,
                 CreatedAt = item.CreatedAt,
-                IsBeforeImage = item.IsBeforeImage ?? false,  // 添加可空布尔值处理
+                IsBeforeImage = item.IsBeforeImage ?? false,  // 处理可空布尔值
                 AfterImageId = item.AfterImageId,
                 AfterImage = item.AfterImage != null ? MapToPortfolioItemDto(item.AfterImage) : null
             };
 
-            // 尝试从元数据中获取缩略图URL
+            // 检查是否为作品集封面
             try
             {
-                var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
-                if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
+                if (!string.IsNullOrEmpty(item.Metadata))
                 {
-                    string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
-                    if (!string.IsNullOrEmpty(thumbnailPath))
+                    var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
+                    if (metadataObj != null)
                     {
-                        dto.ThumbnailUrl = _fileStorage.GetFileUrl(thumbnailPath);
+                        // 设置缩略图URL
+                        if (metadataObj.ContainsKey("ThumbnailPath"))
+                        {
+                            string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
+                            if (!string.IsNullOrEmpty(thumbnailPath))
+                            {
+                                dto.ThumbnailUrl = _fileStorage.GetFileUrl(thumbnailPath);
+                            }
+                        }
+
+                        // 检查是否为封面
+                        if (metadataObj.ContainsKey("IsPortfolioCover") && metadataObj["IsPortfolioCover"].GetBoolean())
+                        {
+                            dto.IsPortfolioCover = true;
+                        }
+
+                        // 检查是否为前后对比图片对的一部分
+                        if (metadataObj.ContainsKey("IsBeforeAfterPair") && metadataObj["IsBeforeAfterPair"].GetBoolean())
+                        {
+                            // 如果是修图前图片，尝试获取关联的修图后图片信息
+                            if (item.IsBeforeImage == true && item.AfterImageId.HasValue)
+                            {
+                                var afterItem = _portfolioRepo.GetPortfolioItemByIdAsync(item.AfterImageId.Value).Result;
+                                if (afterItem != null)
+                                {
+                                    dto.AfterImageUrl = _fileStorage.GetFileUrl(afterItem.ImagePath);
+
+                                    // 尝试获取后图的缩略图
+                                    try
+                                    {
+                                        var afterMetadata = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(afterItem.Metadata);
+                                        if (afterMetadata != null && afterMetadata.ContainsKey("ThumbnailPath"))
+                                        {
+                                            string afterThumbnailPath = afterMetadata["ThumbnailPath"].GetString();
+                                            if (!string.IsNullOrEmpty(afterThumbnailPath))
+                                            {
+                                                dto.AfterThumbnailUrl = _fileStorage.GetFileUrl(afterThumbnailPath);
+                                            }
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        // 忽略元数据解析错误
+                                    }
+                                }
+                            }
+                            // 如果是修图后图片，尝试查找关联的修图前图片
+                            else if (metadataObj.ContainsKey("BeforeItemId") && item.IsBeforeImage == false)
+                            {
+                                int beforeItemId = metadataObj["BeforeItemId"].GetInt32();
+                                var beforeItem = _portfolioRepo.GetPortfolioItemByIdAsync(beforeItemId).Result;
+                                if (beforeItem != null)
+                                {
+                                    dto.BeforeImageUrl = _fileStorage.GetFileUrl(beforeItem.ImagePath);
+
+                                    // 尝试获取前图的缩略图
+                                    try
+                                    {
+                                        var beforeMetadata = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(beforeItem.Metadata);
+                                        if (beforeMetadata != null && beforeMetadata.ContainsKey("ThumbnailPath"))
+                                        {
+                                            string beforeThumbnailPath = beforeMetadata["ThumbnailPath"].GetString();
+                                            if (!string.IsNullOrEmpty(beforeThumbnailPath))
+                                            {
+                                                dto.BeforeThumbnailUrl = _fileStorage.GetFileUrl(beforeThumbnailPath);
+                                            }
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        // 忽略元数据解析错误
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -557,5 +1181,7 @@ namespace PixelPerfect.Services.Impl
 
             return dto;
         }
+
     }
 }
+#endregion    

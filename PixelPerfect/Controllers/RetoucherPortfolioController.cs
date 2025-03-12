@@ -3,7 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PixelPerfect.Core.Models;
 using PixelPerfect.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace PixelPerfect.Controllers
 {
@@ -13,11 +18,16 @@ namespace PixelPerfect.Controllers
     {
         private readonly IPortfolioService _portfolioService;
         private readonly IRetoucherService _retoucherService;
+        private readonly IFileStorageService _fileStorage;
 
-        public RetoucherPortfolioController(IPortfolioService portfolioService, IRetoucherService retoucherService)
+        public RetoucherPortfolioController(
+            IPortfolioService portfolioService,
+            IRetoucherService retoucherService,
+            IFileStorageService fileStorage)
         {
             _portfolioService = portfolioService;
             _retoucherService = retoucherService;
+            _fileStorage = fileStorage;
         }
 
         // 获取所有公开作品集
@@ -280,7 +290,186 @@ namespace PixelPerfect.Controllers
             }
         }
 
-        // 上传作品项（照片）
+        // 上传作品集封面
+        [Authorize]
+        [HttpPost("{portfolioId}/cover")]
+        public async Task<IActionResult> UploadPortfolioCover(int portfolioId, IFormFile file)
+        {
+            if (file == null)
+                return BadRequest(new { message = "No file uploaded." });
+
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 检查是否是作品集所有者
+                var portfolio = await _portfolioService.GetRetoucherPortfolioByIdAsync(portfolioId);
+                if (portfolio == null)
+                    return NotFound(new { message = $"Portfolio with ID {portfolioId} not found." });
+
+                var retoucher = await _retoucherService.GetRetoucherByIdAsync(portfolio.RetoucherId);
+                if (retoucher == null || retoucher.UserId != userId)
+                    return Forbid();
+
+                // 上传封面图片
+                var coverItem = await _portfolioService.SetRetoucherPortfolioCoverAsync(portfolioId, file);
+
+                return Ok(new
+                {
+                    message = "Portfolio cover uploaded successfully.",
+                    coverUrl = coverItem.ImageUrl,
+                    thumbnailUrl = coverItem.ThumbnailUrl,
+                    itemId = coverItem.ItemId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while uploading portfolio cover." });
+            }
+        }
+
+        // 上传作品项（修图前后对比）
+        [Authorize]
+        [HttpPost("{portfolioId}/before-after")]
+        public async Task<IActionResult> UploadBeforeAfterItem(int portfolioId, [FromForm] UploadRetoucherPortfolioItemRequest request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 检查是否是作品集所有者
+                var portfolio = await _portfolioService.GetRetoucherPortfolioByIdAsync(portfolioId);
+                if (portfolio == null)
+                    return NotFound(new { message = $"Portfolio with ID {portfolioId} not found." });
+
+                var retoucher = await _retoucherService.GetRetoucherByIdAsync(portfolio.RetoucherId);
+                if (retoucher == null || retoucher.UserId != userId)
+                    return Forbid();
+
+                // 检查是否有文件上传
+                if (Request.Form.Files.Count == 0)
+                    return BadRequest(new { message = "No files uploaded." });
+
+                // 检查必要的文件
+                var afterImage = Request.Form.Files["afterImage"];
+                if (afterImage == null)
+                    return BadRequest(new { message = "After image is required." });
+
+                // 可选的修图前图片
+                var beforeImage = Request.Form.Files.Count > 1 ? Request.Form.Files["beforeImage"] : null;
+
+                // 上传前后对比图片
+                var item = await _portfolioService.AddRetoucherPortfolioItemWithBeforeAfterAsync(
+                    portfolioId,
+                    afterImage,
+                    beforeImage,
+                    request
+                );
+
+                return Ok(new
+                {
+                    message = "Portfolio before-after item uploaded successfully.",
+                    portfolioItemId = item.ItemId,
+                    afterImageUrl = item.ImageUrl,
+                    afterThumbnailUrl = item.ThumbnailUrl,
+                    beforeImageUrl = item.BeforeImageUrl,
+                    beforeThumbnailUrl = item.BeforeThumbnailUrl,
+                    title = item.Title,
+                    description = item.Description
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while uploading before-after portfolio item." });
+            }
+        }
+
+        // 批量上传作品项（照片）
+        [Authorize]
+        [HttpPost("{portfolioId}/items/batch")]
+        public async Task<IActionResult> BatchUploadPortfolioItems(int portfolioId, [FromForm] BatchPortfolioItemUploadRequest request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 检查是否是作品集所有者
+                var portfolio = await _portfolioService.GetRetoucherPortfolioByIdAsync(portfolioId);
+                if (portfolio == null)
+                    return NotFound(new { message = $"Portfolio with ID {portfolioId} not found." });
+
+                var retoucher = await _retoucherService.GetRetoucherByIdAsync(portfolio.RetoucherId);
+                if (retoucher == null || retoucher.UserId != userId)
+                    return Forbid();
+
+                // 检查是否有文件上传
+                if (Request.Form.Files.Count == 0)
+                    return BadRequest(new { message = "No files uploaded." });
+
+                var uploadedItems = await _portfolioService.BatchAddRetoucherPortfolioItemsAsync(
+                    portfolioId,
+                    Request.Form.Files,
+                    request
+                );
+
+                return Ok(new
+                {
+                    message = $"Successfully uploaded {uploadedItems.Count} items.",
+                    items = uploadedItems.Select(item => new
+                    {
+                        itemId = item.ItemId,
+                        imageUrl = item.ImageUrl,
+                        thumbnailUrl = item.ThumbnailUrl,
+                        title = item.Title
+                    })
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while batch uploading portfolio items." });
+            }
+        }
+
+        // 获取作品项前后对比信息
+        [HttpGet("items/{itemId}/before-after")]
+        public async Task<IActionResult> GetBeforeAfterItem(int itemId)
+        {
+            try
+            {
+                var result = await _portfolioService.GetBeforeAfterImagesAsync(itemId);
+
+                return Ok(new
+                {
+                    beforeImage = result.Before != null ? new
+                    {
+                        itemId = result.Before.ItemId,
+                        imageUrl = result.Before.ImageUrl,
+                        thumbnailUrl = result.Before.ThumbnailUrl,
+                        title = result.Before.Title,
+                        description = result.Before.Description
+                    } : null,
+                    afterImage = result.After != null ? new
+                    {
+                        itemId = result.After.ItemId,
+                        imageUrl = result.After.ImageUrl,
+                        thumbnailUrl = result.After.ThumbnailUrl,
+                        title = result.After.Title,
+                        description = result.After.Description
+                    } : null
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving before-after images." });
+            }
+        }
+
+        // 上传作品项（照片）- 保留原有方法，但标记为已过时
+        [Obsolete("Use /before-after endpoint for uploading before-after images or /items/batch for batch uploads")]
         [Authorize]
         [HttpPost("{portfolioId}/items")]
         public async Task<IActionResult> UploadPortfolioItem(int portfolioId, [FromForm] UploadPortfolioItemRequest request)

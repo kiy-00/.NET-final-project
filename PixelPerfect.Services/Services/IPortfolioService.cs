@@ -29,5 +29,36 @@ namespace PixelPerfect.Services
         Task<PortfolioItemDto> AddItemToRetoucherPortfolioAsync(int portfolioId, IFormFile file, UploadPortfolioItemRequest request);
         Task<bool> UpdatePortfolioItemAsync(int itemId, UpdatePortfolioItemRequest request);
         Task<bool> DeletePortfolioItemAsync(int itemId);
+
+        // 新增 - 摄影师作品集封面方法
+        Task<PortfolioItemDto> SetPhotographerPortfolioCoverAsync(int portfolioId, IFormFile file);
+
+        // 新增 - 修图师作品集封面方法
+        Task<PortfolioItemDto> SetRetoucherPortfolioCoverAsync(int portfolioId, IFormFile file);
+
+        // 新增 - 修图师作品项前后对比上传方法
+        Task<PortfolioItemDto> AddRetoucherPortfolioItemWithBeforeAfterAsync(
+            int portfolioId,
+            IFormFile afterImage,
+            IFormFile beforeImage,
+            UploadRetoucherPortfolioItemRequest request);
+
+        // 新增 - 批量上传摄影师作品项方法
+        Task<List<PortfolioItemDto>> BatchAddPhotographerPortfolioItemsAsync(
+            int portfolioId,
+            IEnumerable<IFormFile> files,
+            BatchPortfolioItemUploadRequest request);
+
+        // 新增 - 批量上传修图师作品项方法
+        Task<List<PortfolioItemDto>> BatchAddRetoucherPortfolioItemsAsync(
+            int portfolioId,
+            IEnumerable<IFormFile> files,
+            BatchPortfolioItemUploadRequest request);
+
+        // 新增 - 获取作品集封面方法
+        Task<PortfolioItemDto> GetPortfolioCoverAsync(int portfolioId, bool isRetoucherPortfolio);
+
+        // 新增 - 获取修图前后对比图片
+        Task<(PortfolioItemDto Before, PortfolioItemDto After)> GetBeforeAfterImagesAsync(int itemId);
     }
 }
