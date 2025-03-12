@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 namespace PixelPerfect.Services.Impl
 {
+    
     public class PhotoService : IPhotoService
     {
         private readonly PhotoBookingDbContext _context;
@@ -301,6 +302,261 @@ namespace PixelPerfect.Services.Impl
                 return false;
 
             return photo.Booking.PhotographerId == photographerId;
+        }
+
+        // 新增方法 - 通用单张图片上传
+        public async Task<PhotoUploadResult> UploadGeneralPhotoAsync(int userId, IFormFile file, string title = null, string description = null)
+        {
+            if (file == null)
+                throw new ArgumentNullException(nameof(file), "文件不能为空");
+
+            try
+            {
+                // 使用文件存储服务保存文件
+                string directory = $"uploads/general/{userId}";
+                string filePath = await _fileStorage.SaveFileAsync(file, directory);
+
+                // 生成缩略图
+                string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                    filePath,
+                    _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                    _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+                );
+
+                // 提取元数据
+                var metadata = new
+                {
+                    OriginalName = file.FileName,
+                    Size = file.Length,
+                    ContentType = file.ContentType,
+                    ThumbnailPath = thumbnailPath,
+                    UploadedAt = DateTime.UtcNow,
+                    UploadType = "General"
+                };
+
+                // 创建照片记录 - 注意我们根据您现有的Photo实体结构进行调整
+                var newPhoto = new Photo
+                {
+                    BookingId = 0,  // 使用默认值，因为这不是预约相关的照片
+                    ImagePath = filePath,
+                    Title = title ?? Path.GetFileNameWithoutExtension(file.FileName),
+                    Description = description ?? $"Uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
+                    Metadata = JsonSerializer.Serialize(metadata),
+                    UploadedAt = DateTime.UtcNow,
+                    IsPublic = true,  // 默认公开
+                    ClientApproved = true  // 自动批准
+                };
+
+                var createdPhoto = await _photoRepo.CreateAsync(newPhoto);
+
+                return new PhotoUploadResult
+                {
+                    PhotoId = createdPhoto.PhotoId,
+                    Url = _fileStorage.GetFileUrl(filePath),
+                    ThumbnailUrl = _fileStorage.GetFileUrl(thumbnailPath)
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException("上传图片时发生错误", ex);
+            }
+        }
+
+        // 新增方法 - 作品集封面图片上传
+        public async Task<PhotoUploadResult> UploadPortfolioCoverAsync(int userId, IFormFile file)
+        {
+            if (file == null)
+                throw new ArgumentNullException(nameof(file), "文件不能为空");
+
+            try
+            {
+                // 使用文件存储服务保存文件
+                string directory = $"uploads/portfolio/covers/{userId}";
+                string filePath = await _fileStorage.SaveFileAsync(file, directory);
+
+                // 生成缩略图
+                string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                    filePath,
+                    _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                    _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+                );
+
+                // 提取元数据
+                var metadata = new
+                {
+                    OriginalName = file.FileName,
+                    Size = file.Length,
+                    ContentType = file.ContentType,
+                    ThumbnailPath = thumbnailPath,
+                    UploadedAt = DateTime.UtcNow,
+                    UploadType = "PortfolioCover"
+                };
+
+                // 创建照片记录
+                var newPhoto = new Photo
+                {
+                    BookingId = 0,  // 使用默认值
+                    ImagePath = filePath,
+                    Title = "Portfolio Cover",
+                    Description = $"Portfolio cover uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
+                    Metadata = JsonSerializer.Serialize(metadata),
+                    UploadedAt = DateTime.UtcNow,
+                    IsPublic = true,  // 封面默认公开
+                    ClientApproved = true  // 自动批准
+                };
+
+                var createdPhoto = await _photoRepo.CreateAsync(newPhoto);
+
+                return new PhotoUploadResult
+                {
+                    PhotoId = createdPhoto.PhotoId,
+                    Url = _fileStorage.GetFileUrl(filePath),
+                    ThumbnailUrl = _fileStorage.GetFileUrl(thumbnailPath)
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException("上传作品集封面时发生错误", ex);
+            }
+        }
+
+        // 新增方法 - 作品项图片上传
+        public async Task<PortfolioItemUploadResult> UploadPortfolioItemPhotoAsync(
+            int userId,
+            IFormFile mainFile,
+            IFormFile beforeFile = null,
+            string title = null,
+            string description = null)
+        {
+            if (mainFile == null)
+                throw new ArgumentNullException(nameof(mainFile), "主图文件不能为空");
+
+            try
+            {
+                string directory = $"uploads/portfolio/items/{userId}";
+
+                // 上传主图
+                string mainFilePath = await _fileStorage.SaveFileAsync(mainFile, directory);
+                string mainThumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                    mainFilePath,
+                    _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                    _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+                );
+
+                // 上传前图（如果有）
+                string beforeFilePath = null;
+                string beforeThumbnailPath = null;
+
+                if (beforeFile != null)
+                {
+                    beforeFilePath = await _fileStorage.SaveFileAsync(beforeFile, directory);
+                    beforeThumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                        beforeFilePath,
+                        _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                        _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+                    );
+                }
+
+                // 提取元数据
+                var metadata = new
+                {
+                    OriginalName = mainFile.FileName,
+                    Size = mainFile.Length,
+                    ContentType = mainFile.ContentType,
+                    ThumbnailPath = mainThumbnailPath,
+                    BeforeImagePath = beforeFilePath,
+                    BeforeThumbnailPath = beforeThumbnailPath,
+                    UploadedAt = DateTime.UtcNow,
+                    UploadType = "PortfolioItem"
+                };
+
+                // 创建照片记录
+                var newPhoto = new Photo
+                {
+                    BookingId = 0,  // 使用默认值
+                    ImagePath = mainFilePath,
+                    Title = title ?? Path.GetFileNameWithoutExtension(mainFile.FileName),
+                    Description = description ?? $"Portfolio item uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
+                    Metadata = JsonSerializer.Serialize(metadata),
+                    UploadedAt = DateTime.UtcNow,
+                    IsPublic = true,
+                    ClientApproved = true
+                };
+
+                var createdPhoto = await _photoRepo.CreateAsync(newPhoto);
+
+                return new PortfolioItemUploadResult
+                {
+                    PhotoId = createdPhoto.PhotoId,
+                    MainImageUrl = _fileStorage.GetFileUrl(mainFilePath),
+                    MainThumbnailUrl = _fileStorage.GetFileUrl(mainThumbnailPath),
+                    BeforeImageUrl = beforeFilePath != null ? _fileStorage.GetFileUrl(beforeFilePath) : null,
+                    BeforeThumbnailUrl = beforeThumbnailPath != null ? _fileStorage.GetFileUrl(beforeThumbnailPath) : null
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException("上传作品项图片时发生错误", ex);
+            }
+        }
+
+        // 新增方法 - 临时图片上传
+        public async Task<PhotoUploadResult> UploadTempPhotoAsync(int userId, IFormFile file)
+        {
+            if (file == null)
+                throw new ArgumentNullException(nameof(file), "文件不能为空");
+
+            try
+            {
+                // 使用文件存储服务保存文件
+                string directory = $"uploads/temp/{userId}";
+                string filePath = await _fileStorage.SaveFileAsync(file, directory);
+
+                // 生成缩略图
+                string thumbnailPath = await _fileStorage.GenerateThumbnailAsync(
+                    filePath,
+                    _config.GetValue<int>("FileStorage:ThumbnailWidth", 300),
+                    _config.GetValue<int>("FileStorage:ThumbnailHeight", 300)
+                );
+
+                // 提取元数据
+                var metadata = new
+                {
+                    OriginalName = file.FileName,
+                    Size = file.Length,
+                    ContentType = file.ContentType,
+                    ThumbnailPath = thumbnailPath,
+                    UploadedAt = DateTime.UtcNow,
+                    UploadType = "Temporary",
+                    ExpiryDate = DateTime.UtcNow.AddDays(7)  // 临时文件7天后过期
+                };
+
+                // 创建照片记录
+                var newPhoto = new Photo
+                {
+                    BookingId = 0,  // 使用默认值
+                    ImagePath = filePath,
+                    Title = Path.GetFileNameWithoutExtension(file.FileName),
+                    Description = $"Temporary file, expires on {DateTime.UtcNow.AddDays(7):yyyy-MM-dd}",
+                    Metadata = JsonSerializer.Serialize(metadata),
+                    UploadedAt = DateTime.UtcNow,
+                    IsPublic = true,
+                    ClientApproved = true
+                };
+
+                var createdPhoto = await _photoRepo.CreateAsync(newPhoto);
+
+                return new PhotoUploadResult
+                {
+                    PhotoId = createdPhoto.PhotoId,
+                    Url = _fileStorage.GetFileUrl(filePath),
+                    ThumbnailUrl = _fileStorage.GetFileUrl(thumbnailPath)
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException("上传临时图片时发生错误", ex);
+            }
         }
 
         // 辅助方法 - 实体映射到DTO

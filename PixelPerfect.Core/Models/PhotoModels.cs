@@ -73,4 +73,22 @@ namespace PixelPerfect.Core.Models
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
     }
+
+    // 添加新的结果类型
+    public class PhotoUploadResult
+    {
+        public int PhotoId { get; set; }
+        public string Url { get; set; }
+        public string ThumbnailUrl { get; set; }
+    }
+
+    public class PortfolioItemUploadResult
+    {
+        public int PhotoId { get; set; }
+        public string MainImageUrl { get; set; }
+        public string MainThumbnailUrl { get; set; }
+        public string? BeforeImageUrl { get; set; }
+        public string? BeforeThumbnailUrl { get; set; }
+    }
+
 }

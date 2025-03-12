@@ -308,6 +308,128 @@ namespace PixelPerfect.Controllers
             }
         }
 
-        
+        // 通用单张图片上传接口
+        [HttpPost("upload/general")]
+        [Authorize]
+        public async Task<IActionResult> UploadGeneralPhoto(IFormFile file, [FromForm] string title = null, [FromForm] string description = null)
+        {
+            if (file == null)
+                return BadRequest(new { message = "No file uploaded." });
+
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 这个接口允许任何登录用户上传图片
+                var uploadResult = await _photoService.UploadGeneralPhotoAsync(userId, file, title, description);
+                return Ok(new
+                {
+                    message = "Photo uploaded successfully.",
+                    photoUrl = uploadResult.Url,
+                    thumbnailUrl = uploadResult.ThumbnailUrl,
+                    photoId = uploadResult.PhotoId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while uploading the photo." });
+            }
+        }
+
+        // 作品集封面图片上传接口
+        [HttpPost("upload/portfolio-cover")]
+        [Authorize]
+        public async Task<IActionResult> UploadPortfolioCover(IFormFile file)
+        {
+            if (file == null)
+                return BadRequest(new { message = "No file uploaded." });
+
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                // 可以同时支持摄影师和修图师上传封面
+                var uploadResult = await _photoService.UploadPortfolioCoverAsync(userId, file);
+                return Ok(new
+                {
+                    message = "Portfolio cover uploaded successfully.",
+                    coverUrl = uploadResult.Url,
+                    thumbnailUrl = uploadResult.ThumbnailUrl,
+                    photoId = uploadResult.PhotoId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while uploading the portfolio cover." });
+            }
+        }
+
+        // 作品项图片上传接口 - 可以同时上传前后对比图片（修图师需要）
+        [HttpPost("upload/portfolio-item")]
+        [Authorize]
+        public async Task<IActionResult> UploadPortfolioItemPhoto(
+            IFormFile mainFile,
+            IFormFile beforeFile = null,
+            [FromForm] string title = null,
+            [FromForm] string description = null)
+        {
+            if (mainFile == null)
+                return BadRequest(new { message = "No main file uploaded." });
+
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                var uploadResult = await _photoService.UploadPortfolioItemPhotoAsync(
+                    userId,
+                    mainFile,
+                    beforeFile,
+                    title,
+                    description);
+
+                return Ok(new
+                {
+                    message = "Portfolio item photo(s) uploaded successfully.",
+                    mainImageUrl = uploadResult.MainImageUrl,
+                    mainThumbnailUrl = uploadResult.MainThumbnailUrl,
+                    beforeImageUrl = uploadResult.BeforeImageUrl,
+                    beforeThumbnailUrl = uploadResult.BeforeThumbnailUrl,
+                    photoId = uploadResult.PhotoId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while uploading the portfolio item photo(s)." });
+            }
+        }
+
+        // 临时图片上传接口
+        [HttpPost("upload/temp")]
+        [Authorize]
+        public async Task<IActionResult> UploadTempPhoto(IFormFile file)
+        {
+            if (file == null)
+                return BadRequest(new { message = "No file uploaded." });
+
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                var uploadResult = await _photoService.UploadTempPhotoAsync(userId, file);
+                return Ok(new
+                {
+                    message = "Temporary photo uploaded successfully.",
+                    photoUrl = uploadResult.Url,
+                    thumbnailUrl = uploadResult.ThumbnailUrl,
+                    photoId = uploadResult.PhotoId
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while uploading the temporary photo." });
+            }
+        }
+
+
     }
 }

@@ -24,5 +24,17 @@ namespace PixelPerfect.Services
         // 权限检查
         Task<bool> CanAccessPhotoAsync(int photoId, int userId);
         Task<bool> IsPhotographerPhotoAsync(int photoId, int photographerId);
+
+        // 新增通用单张图片上传方法
+        Task<PhotoUploadResult> UploadGeneralPhotoAsync(int userId, IFormFile file, string title = null, string description = null);
+
+        // 新增作品集封面图片上传方法
+        Task<PhotoUploadResult> UploadPortfolioCoverAsync(int userId, IFormFile file);
+
+        // 新增作品项图片上传方法
+        Task<PortfolioItemUploadResult> UploadPortfolioItemPhotoAsync(int userId, IFormFile mainFile, IFormFile beforeFile = null, string title = null, string description = null);
+
+        // 新增临时图片上传方法
+        Task<PhotoUploadResult> UploadTempPhotoAsync(int userId, IFormFile file);
     }
 }
