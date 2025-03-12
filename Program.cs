@@ -9,11 +9,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Http.Features;
 using PixelPerfect.Core.Entities;
 using PixelPerfect.DataAccess.Repos;
 using PixelPerfect.Services;
 using PixelPerfect.Services.Impl;
 using System.IO; // 用于文件和目录操作
+using SixLabors.ImageSharp.Web;
 
 namespace PixelPerfect
 {
@@ -72,6 +74,18 @@ namespace PixelPerfect
                             options.UseMySql(configuration.GetConnectionString("DefaultConnection"),
                                 new MySqlServerVersion(new Version(8, 0, 28))));
 
+                        // 注册文件存储服务
+                        services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+
+                        // 添加 ImageSharp 支持
+                        //services.AddImageSharp();
+
+                        // 配置文件上传大小限制
+                        services.Configure<FormOptions>(options =>
+                        {
+                            options.MultipartBodyLengthLimit = 20971520; // 20MB
+                        });
+
                         // 注册仓库
                         services.AddScoped<UserRepo>();
                         // 注册服务
@@ -108,14 +122,14 @@ namespace PixelPerfect
                         services.AddScoped<NotificationRepo>();
                         services.AddScoped<INotificationService, NotificationService>();
 
-						// 注册社区功能相关服务
-						services.AddScoped<PostRepo>();
-					    services.AddScoped<LikeRepo>();
-						services.AddScoped<IPostService, PostService>();
-						services.AddScoped<ILikeService, LikeService>();
+                        // 注册社区功能相关服务
+                        services.AddScoped<PostRepo>();
+                        services.AddScoped<LikeRepo>();
+                        services.AddScoped<IPostService, PostService>();
+                        services.AddScoped<ILikeService, LikeService>();
 
-						// Swagger配置
-						services.AddSwaggerGen(c =>
+                        // Swagger配置
+                        services.AddSwaggerGen(c =>
                         {
                             c.SwaggerDoc("v1", new OpenApiInfo { Title = "PixelPerfect API", Version = "v1" });
 
@@ -165,17 +179,47 @@ namespace PixelPerfect
                         }
 
                         app.UseHttpsRedirection();
+
                         // 添加静态文件中间件
                         app.UseStaticFiles();
 
-                        // 确保上传目录存在
+                        // 确保上传目录结构存在
                         if (!string.IsNullOrEmpty(env.WebRootPath))
                         {
-                            var uploadDir = Path.Combine(env.WebRootPath, "uploads", "portfolio");
-                            if (!Directory.Exists(uploadDir))
-                            {
-                                Directory.CreateDirectory(uploadDir);
-                            }
+                            // 确保基础上传目录存在
+                            var uploadsDir = Path.Combine(env.WebRootPath, "uploads");
+                            if (!Directory.Exists(uploadsDir))
+                                Directory.CreateDirectory(uploadsDir);
+
+                            // 确保照片上传目录存在
+                            var photosDir = Path.Combine(uploadsDir, "photos");
+                            if (!Directory.Exists(photosDir))
+                                Directory.CreateDirectory(photosDir);
+
+                            // 确保作品集上传目录存在
+                            var portfolioDir = Path.Combine(uploadsDir, "portfolio");
+                            if (!Directory.Exists(portfolioDir))
+                                Directory.CreateDirectory(portfolioDir);
+
+                            // 确保摄影师作品集目录存在
+                            var photographerDir = Path.Combine(portfolioDir, "photographer");
+                            if (!Directory.Exists(photographerDir))
+                                Directory.CreateDirectory(photographerDir);
+
+                            // 确保修图师作品集目录存在
+                            var retoucherDir = Path.Combine(portfolioDir, "retoucher");
+                            if (!Directory.Exists(retoucherDir))
+                                Directory.CreateDirectory(retoucherDir);
+
+                            // 确保头像上传目录存在
+                            var avatarsDir = Path.Combine(uploadsDir, "avatars");
+                            if (!Directory.Exists(avatarsDir))
+                                Directory.CreateDirectory(avatarsDir);
+
+                            // 确保社区帖子上传目录存在
+                            var postsDir = Path.Combine(uploadsDir, "posts");
+                            if (!Directory.Exists(postsDir))
+                                Directory.CreateDirectory(postsDir);
                         }
                         else
                         {
@@ -191,9 +235,21 @@ namespace PixelPerfect
                             if (!Directory.Exists(uploadsDir))
                                 Directory.CreateDirectory(uploadsDir);
 
-                            var portfolioDir = Path.Combine(uploadsDir, "portfolio");
-                            if (!Directory.Exists(portfolioDir))
-                                Directory.CreateDirectory(portfolioDir);
+                            // 创建各种上传目录
+                            var dirsToCreate = new[] {
+                                Path.Combine(uploadsDir, "photos"),
+                                Path.Combine(uploadsDir, "portfolio"),
+                                Path.Combine(uploadsDir, "portfolio", "photographer"),
+                                Path.Combine(uploadsDir, "portfolio", "retoucher"),
+                                Path.Combine(uploadsDir, "avatars"),
+                                Path.Combine(uploadsDir, "posts")
+                            };
+
+                            foreach (var dir in dirsToCreate)
+                            {
+                                if (!Directory.Exists(dir))
+                                    Directory.CreateDirectory(dir);
+                            }
                         }
 
                         app.UseRouting();

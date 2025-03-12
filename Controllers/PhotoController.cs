@@ -307,5 +307,7 @@ namespace PixelPerfect.Controllers
                 return StatusCode(500, new { message = "An error occurred while searching photos." });
             }
         }
+
+        
     }
 }
