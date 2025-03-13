@@ -46,8 +46,17 @@ namespace PixelPerfect.Services.Impl
             if (!Directory.Exists(targetDirectory))
                 Directory.CreateDirectory(targetDirectory);
 
-            // 生成文件名
-            fileName = fileName ?? $"{Guid.NewGuid()}{fileExtension}";
+            // 生成文件名，关键修改：确保文件名包含扩展名
+            if (fileName == null)
+            {
+                fileName = $"{Guid.NewGuid()}{fileExtension}";
+            }
+            else if (!Path.HasExtension(fileName))
+            {
+                // 如果自定义文件名没有扩展名，添加原始文件的扩展名
+                fileName = $"{fileName}{fileExtension}";
+            }
+
             string fullPath = Path.Combine(targetDirectory, fileName);
             string relativePath = Path.Combine(directory, fileName).Replace("\\", "/");
 
