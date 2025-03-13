@@ -19,7 +19,7 @@ namespace PixelPerfect.DataAccess.Repos
             return await _context.Photographerportfolios
                 .Include(p => p.Photographer)
                     .ThenInclude(p => p.User)
-                .Include(p => p.Portfolioitems)
+                .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Photographer"))
                 .FirstOrDefaultAsync(p => p.PortfolioId == portfolioId);
         }
 
@@ -28,7 +28,7 @@ namespace PixelPerfect.DataAccess.Repos
             var query = _context.Photographerportfolios
                 .Include(p => p.Photographer)
                     .ThenInclude(p => p.User)
-                .Include(p => p.Portfolioitems)
+                .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Photographer"))
                 .Where(p => p.PhotographerId == photographerId);
 
             if (publicOnly)
@@ -42,7 +42,7 @@ namespace PixelPerfect.DataAccess.Repos
             var query = _context.Photographerportfolios
                 .Include(p => p.Photographer)
                   .ThenInclude(p => p.User)
-               .Include(p => p.Portfolioitems)
+               .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Photographer"))
                .AsQueryable();
 
             if (publicOnly)
@@ -81,7 +81,7 @@ namespace PixelPerfect.DataAccess.Repos
             return await _context.Retoucherportfolios
                 .Include(p => p.Retoucher)
                     .ThenInclude(p => p.User)
-                .Include(p => p.Portfolioitems)
+                .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Retoucher"))
                 .FirstOrDefaultAsync(p => p.PortfolioId == portfolioId);
         }
 
@@ -90,10 +90,9 @@ namespace PixelPerfect.DataAccess.Repos
             var query = _context.Retoucherportfolios
                 .Include(p => p.Retoucher)
                     .ThenInclude(p => p.User)
-                .Include(p => p.Portfolioitems)
+                .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Retoucher"))
                 .Where(p => p.RetoucherId == retoucherId);
 
-            // 修改后
             if (publicOnly)
                 query = query.Where(p => p.IsPublic == true);
 
@@ -105,10 +104,9 @@ namespace PixelPerfect.DataAccess.Repos
             var query = _context.Retoucherportfolios
                 .Include(p => p.Retoucher)
                     .ThenInclude(p => p.User)
-                .Include(p => p.Portfolioitems)
+                .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Retoucher"))
                 .AsQueryable();
 
-            // 修改后
             if (publicOnly)
                 query = query.Where(p => p.IsPublic == true);
 
@@ -147,6 +145,15 @@ namespace PixelPerfect.DataAccess.Repos
                 .FirstOrDefaultAsync(i => i.ItemId == itemId);
         }
 
+        public async Task<List<Portfolioitem>> GetPortfolioitemsByPortfolioIdAsync(int portfolioId, string portfolioType)
+        {
+            return await _context.Portfolioitems
+                .Include(i => i.AfterImage)
+                .Where(i => i.PortfolioId == portfolioId && i.PortfolioType == portfolioType)
+                .ToListAsync();
+        }
+
+        // 向后兼容方法
         public async Task<List<Portfolioitem>> GetPortfolioitemsByPortfolioIdAsync(int portfolioId)
         {
             return await _context.Portfolioitems
@@ -155,15 +162,33 @@ namespace PixelPerfect.DataAccess.Repos
                 .ToListAsync();
         }
 
-        public async Task<Portfolioitem> CreatePortfolioItemAsync(Portfolioitem item)
+        public async Task<Portfolioitem> CreatePortfolioItemAsync(Portfolioitem item, bool isRetoucher = false)
         {
+            // 设置作品集类型
+            item.PortfolioType = isRetoucher ? "Retoucher" : "Photographer";
+
             _context.Portfolioitems.Add(item);
             await _context.SaveChangesAsync();
             return item;
         }
 
+        // 保留原始方法以向后兼容，但内部实现已更新
+        public async Task<Portfolioitem> CreatePortfolioItemAsync(Portfolioitem item)
+        {
+            // 检查是否为修图师作品集
+            bool isRetoucher = await _context.Retoucherportfolios.AnyAsync(p => p.PortfolioId == item.PortfolioId);
+            return await CreatePortfolioItemAsync(item, isRetoucher);
+        }
+
         public async Task<bool> UpdatePortfolioItemAsync(Portfolioitem item)
         {
+            // 如果没设置PortfolioType，自动检测并设置
+            if (string.IsNullOrEmpty(item.PortfolioType))
+            {
+                bool isRetoucher = await _context.Retoucherportfolios.AnyAsync(p => p.PortfolioId == item.PortfolioId);
+                item.PortfolioType = isRetoucher ? "Retoucher" : "Photographer";
+            }
+
             _context.Portfolioitems.Update(item);
             var affected = await _context.SaveChangesAsync();
             return affected > 0;

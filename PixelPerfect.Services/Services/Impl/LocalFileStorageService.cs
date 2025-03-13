@@ -72,9 +72,16 @@ namespace PixelPerfect.Services.Impl
             if (filePath.StartsWith("http://") || filePath.StartsWith("https://"))
                 return filePath;
 
-            // 如果不是以/开头，添加/
-            if (!filePath.StartsWith("/"))
+            // 添加 /uploads 前缀
+            if (!filePath.StartsWith("/uploads/") && !filePath.StartsWith("uploads/"))
+            {
+                filePath = filePath.TrimStart('/');
+                filePath = "/uploads/" + filePath;
+            }
+            else if (filePath.StartsWith("uploads/"))
+            {
                 filePath = "/" + filePath;
+            }
 
             return filePath;
         }
@@ -86,7 +93,17 @@ namespace PixelPerfect.Services.Impl
 
             try
             {
-                string fullPath = Path.Combine(_env.WebRootPath, filePath.TrimStart('/'));
+                // 从文件路径中移除 /uploads 前缀以获取正确的物理路径
+                if (filePath.StartsWith("/uploads/"))
+                {
+                    filePath = filePath.Substring("/uploads/".Length);
+                }
+                else if (filePath.StartsWith("uploads/"))
+                {
+                    filePath = filePath.Substring("uploads/".Length);
+                }
+
+                string fullPath = Path.Combine(_baseStoragePath, filePath);
 
                 if (File.Exists(fullPath))
                 {
@@ -119,7 +136,17 @@ namespace PixelPerfect.Services.Impl
 
             try
             {
-                string fullPath = Path.Combine(_env.WebRootPath, originalPath.TrimStart('/'));
+                // 处理originalPath可能包含/uploads前缀的情况
+                if (originalPath.StartsWith("/uploads/"))
+                {
+                    originalPath = originalPath.Substring("/uploads/".Length);
+                }
+                else if (originalPath.StartsWith("uploads/"))
+                {
+                    originalPath = originalPath.Substring("uploads/".Length);
+                }
+
+                string fullPath = Path.Combine(_baseStoragePath, originalPath);
                 string directory = Path.GetDirectoryName(fullPath);
                 string filename = Path.GetFileName(fullPath);
 

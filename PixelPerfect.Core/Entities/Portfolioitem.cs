@@ -9,6 +9,8 @@ public partial class Portfolioitem
 
     public int PortfolioId { get; set; }
 
+    public string PortfolioType { get; set; } = null!;
+
     public string ImagePath { get; set; } = null!;
 
     public string? Title { get; set; }

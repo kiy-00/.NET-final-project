@@ -425,6 +425,10 @@ namespace PixelPerfect.Controllers
                 if (item == null)
                     return NotFound(new { message = $"Portfolio item with ID {itemId} not found." });
 
+                // 检查作品项类型是否正确
+                if (item.PortfolioType != "Photographer")
+                    return BadRequest(new { message = "This item does not belong to a photographer portfolio." });
+
                 var portfolio = await _portfolioService.GetPhotographerPortfolioByIdAsync(item.PortfolioId);
                 if (portfolio == null)
                     return NotFound(new { message = $"Portfolio not found." });
@@ -458,6 +462,10 @@ namespace PixelPerfect.Controllers
                 var item = await _portfolioService.GetPortfolioItemByIdAsync(itemId);
                 if (item == null)
                     return NotFound(new { message = $"Portfolio item with ID {itemId} not found." });
+
+                // 检查作品项类型是否正确
+                if (item.PortfolioType != "Photographer")
+                    return BadRequest(new { message = "This item does not belong to a photographer portfolio." });
 
                 var portfolio = await _portfolioService.GetPhotographerPortfolioByIdAsync(item.PortfolioId);
                 if (portfolio == null)

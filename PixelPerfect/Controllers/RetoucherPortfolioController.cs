@@ -436,6 +436,14 @@ namespace PixelPerfect.Controllers
         {
             try
             {
+                // 先获取作品项确认它是修图师类型
+                var item = await _portfolioService.GetPortfolioItemByIdAsync(itemId);
+                if (item == null)
+                    return NotFound(new { message = $"Portfolio item with ID {itemId} not found." });
+
+                if (item.PortfolioType != "Retoucher")
+                    return BadRequest(new { message = "This item does not belong to a retoucher portfolio." });
+
                 var result = await _portfolioService.GetBeforeAfterImagesAsync(itemId);
 
                 return Ok(new
@@ -519,6 +527,10 @@ namespace PixelPerfect.Controllers
                 if (item == null)
                     return NotFound(new { message = $"Portfolio item with ID {itemId} not found." });
 
+                // 检查作品项类型是否正确
+                if (item.PortfolioType != "Retoucher")
+                    return BadRequest(new { message = "This item does not belong to a retoucher portfolio." });
+
                 var portfolio = await _portfolioService.GetRetoucherPortfolioByIdAsync(item.PortfolioId);
                 if (portfolio == null)
                     return NotFound(new { message = $"Portfolio not found." });
@@ -552,6 +564,10 @@ namespace PixelPerfect.Controllers
                 var item = await _portfolioService.GetPortfolioItemByIdAsync(itemId);
                 if (item == null)
                     return NotFound(new { message = $"Portfolio item with ID {itemId} not found." });
+
+                // 检查作品项类型是否正确
+                if (item.PortfolioType != "Retoucher")
+                    return BadRequest(new { message = "This item does not belong to a retoucher portfolio." });
 
                 var portfolio = await _portfolioService.GetRetoucherPortfolioByIdAsync(item.PortfolioId);
                 if (portfolio == null)

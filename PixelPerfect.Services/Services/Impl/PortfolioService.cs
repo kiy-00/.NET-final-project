@@ -39,7 +39,7 @@ namespace PixelPerfect.Services.Impl
             var query = _context.Photographerportfolios
                 .Include(p => p.Photographer)
                     .ThenInclude(p => p.User)
-                .Include(p => p.Portfolioitems)
+                .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Photographer"))
                 .AsQueryable();
 
             if (searchParams.IsPublic.HasValue)
@@ -77,7 +77,7 @@ namespace PixelPerfect.Services.Impl
             var query = _context.Photographerportfolios
                 .Include(p => p.Photographer)
                     .ThenInclude(p => p.User)
-                .Include(p => p.Portfolioitems)
+                .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Photographer"))
                 .Where(p => p.PhotographerId == photographerId);
 
             if (searchParams.IsPublic.HasValue)
@@ -179,7 +179,7 @@ namespace PixelPerfect.Services.Impl
         public async Task<bool> DeletePhotographerPortfolioAsync(int portfolioId)
         {
             // 先删除作品集中的所有作品项
-            var items = await _portfolioRepo.GetPortfolioitemsByPortfolioIdAsync(portfolioId);
+            var items = await _portfolioRepo.GetPortfolioitemsByPortfolioIdAsync(portfolioId, "Photographer");
             foreach (var item in items)
             {
                 // 删除文件
@@ -222,7 +222,7 @@ namespace PixelPerfect.Services.Impl
             var query = _context.Retoucherportfolios
                 .Include(p => p.Retoucher)
                     .ThenInclude(p => p.User)
-                .Include(p => p.Portfolioitems)
+                .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Retoucher"))
                 .AsQueryable();
 
             if (searchParams.IsPublic.HasValue)
@@ -260,7 +260,7 @@ namespace PixelPerfect.Services.Impl
             var query = _context.Retoucherportfolios
                 .Include(p => p.Retoucher)
                     .ThenInclude(p => p.User)
-                .Include(p => p.Portfolioitems)
+                .Include(p => p.Portfolioitems.Where(i => i.PortfolioType == "Retoucher"))
                 .Where(p => p.RetoucherId == retoucherId);
 
             if (searchParams.IsPublic.HasValue)
@@ -362,7 +362,7 @@ namespace PixelPerfect.Services.Impl
         public async Task<bool> DeleteRetoucherPortfolioAsync(int portfolioId)
         {
             // 先删除作品集中的所有作品项
-            var items = await _portfolioRepo.GetPortfolioitemsByPortfolioIdAsync(portfolioId);
+            var items = await _portfolioRepo.GetPortfolioitemsByPortfolioIdAsync(portfolioId, "Retoucher");
             foreach (var item in items)
             {
                 // 删除文件
@@ -442,6 +442,7 @@ namespace PixelPerfect.Services.Impl
             var item = new Portfolioitem
             {
                 PortfolioId = portfolioId,
+                PortfolioType = "Photographer", // 设置作品集类型
                 ImagePath = filePath,
                 Title = request.Title,
                 Description = request.Description,
@@ -451,7 +452,7 @@ namespace PixelPerfect.Services.Impl
                 AfterImageId = request.AfterImageId
             };
 
-            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, false);
 
             // 更新作品集的最后修改时间
             portfolio.UpdatedAt = DateTime.UtcNow;
@@ -493,6 +494,7 @@ namespace PixelPerfect.Services.Impl
             var item = new Portfolioitem
             {
                 PortfolioId = portfolioId,
+                PortfolioType = "Retoucher", // 设置作品集类型
                 ImagePath = filePath,
                 Title = request.Title,
                 Description = request.Description,
@@ -502,7 +504,7 @@ namespace PixelPerfect.Services.Impl
                 AfterImageId = request.AfterImageId
             };
 
-            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, true);
 
             // 更新作品集的最后修改时间
             portfolio.UpdatedAt = DateTime.UtcNow;
@@ -610,6 +612,7 @@ namespace PixelPerfect.Services.Impl
             var item = new Portfolioitem
             {
                 PortfolioId = portfolioId,
+                PortfolioType = "Photographer", // 设置作品集类型
                 ImagePath = filePath,
                 Title = "Cover Image",
                 Description = "Portfolio Cover Image",
@@ -619,7 +622,7 @@ namespace PixelPerfect.Services.Impl
                 AfterImageId = null
             };
 
-            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, false);
 
             // 更新作品集的最后修改时间
             portfolio.UpdatedAt = DateTime.UtcNow;
@@ -668,6 +671,7 @@ namespace PixelPerfect.Services.Impl
             var item = new Portfolioitem
             {
                 PortfolioId = portfolioId,
+                PortfolioType = "Retoucher", // 设置作品集类型
                 ImagePath = filePath,
                 Title = "Cover Image",
                 Description = "Portfolio Cover Image",
@@ -677,7 +681,7 @@ namespace PixelPerfect.Services.Impl
                 AfterImageId = null
             };
 
-            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+            var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, true);
 
             // 更新作品集的最后修改时间
             portfolio.UpdatedAt = DateTime.UtcNow;
@@ -689,7 +693,8 @@ namespace PixelPerfect.Services.Impl
         public async Task<PortfolioItemDto> GetPortfolioCoverAsync(int portfolioId, bool isRetoucherPortfolio)
         {
             // 查询具有封面标记的作品项
-            var items = await _portfolioRepo.GetPortfolioitemsByPortfolioIdAsync(portfolioId);
+            string portfolioType = isRetoucherPortfolio ? "Retoucher" : "Photographer";
+            var items = await _portfolioRepo.GetPortfolioitemsByPortfolioIdAsync(portfolioId, portfolioType);
             if (items == null || !items.Any())
                 return null;
 
@@ -766,6 +771,7 @@ namespace PixelPerfect.Services.Impl
                 beforeItem = new Portfolioitem
                 {
                     PortfolioId = portfolioId,
+                    PortfolioType = "Retoucher", // 设置作品集类型
                     ImagePath = beforeFilePath,
                     Title = $"{request.Title} (Before)",
                     Description = request.Description,
@@ -774,7 +780,7 @@ namespace PixelPerfect.Services.Impl
                     IsBeforeImage = true
                 };
 
-                beforeItem = await _portfolioRepo.CreatePortfolioItemAsync(beforeItem);
+                beforeItem = await _portfolioRepo.CreatePortfolioItemAsync(beforeItem, true);
             }
 
             // 保存修图后图片
@@ -798,6 +804,7 @@ namespace PixelPerfect.Services.Impl
             var afterItem = new Portfolioitem
             {
                 PortfolioId = portfolioId,
+                PortfolioType = "Retoucher", // 设置作品集类型
                 ImagePath = afterFilePath,
                 Title = request.Title ?? "Retouched Image",
                 Description = request.Description,
@@ -806,7 +813,7 @@ namespace PixelPerfect.Services.Impl
                 IsBeforeImage = false
             };
 
-            var createdAfterItem = await _portfolioRepo.CreatePortfolioItemAsync(afterItem);
+            var createdAfterItem = await _portfolioRepo.CreatePortfolioItemAsync(afterItem, true);
 
             // 如果有修图前图片，更新关联关系
             if (beforeItem != null)
@@ -877,7 +884,7 @@ namespace PixelPerfect.Services.Impl
 
                 // 查找关联的修图前图片
                 var beforeItems = await _context.Portfolioitems
-                    .Where(i => i.AfterImageId == itemId && i.IsBeforeImage == true)
+                    .Where(i => i.AfterImageId == itemId && i.IsBeforeImage == true && i.PortfolioType == item.PortfolioType)
                     .ToListAsync();
 
                 if (beforeItems.Any())
@@ -937,6 +944,7 @@ namespace PixelPerfect.Services.Impl
                     var item = new Portfolioitem
                     {
                         PortfolioId = portfolioId,
+                        PortfolioType = "Photographer", // 设置作品集类型
                         ImagePath = filePath,
                         Title = title,
                         Description = request.Description,
@@ -946,7 +954,7 @@ namespace PixelPerfect.Services.Impl
                         AfterImageId = null
                     };
 
-                    var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+                    var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, false);
                     uploadedItems.Add(MapToPortfolioItemDto(createdItem));
                 }
                 catch (Exception ex)
@@ -1007,6 +1015,7 @@ namespace PixelPerfect.Services.Impl
                     var item = new Portfolioitem
                     {
                         PortfolioId = portfolioId,
+                        PortfolioType = "Retoucher", // 设置作品集类型
                         ImagePath = filePath,
                         Title = title,
                         Description = request.Description,
@@ -1016,7 +1025,7 @@ namespace PixelPerfect.Services.Impl
                         AfterImageId = null
                     };
 
-                    var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item);
+                    var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, true);
                     uploadedItems.Add(MapToPortfolioItemDto(createdItem));
                 }
                 catch (Exception ex)
@@ -1077,6 +1086,7 @@ namespace PixelPerfect.Services.Impl
             {
                 ItemId = item.ItemId,
                 PortfolioId = item.PortfolioId,
+                PortfolioType = item.PortfolioType, // 添加类型信息到DTO
                 ImagePath = item.ImagePath,
                 ImageUrl = _fileStorage.GetFileUrl(item.ImagePath),
                 Title = item.Title,
@@ -1181,7 +1191,6 @@ namespace PixelPerfect.Services.Impl
 
             return dto;
         }
-
+        #endregion
     }
 }
-#endregion    

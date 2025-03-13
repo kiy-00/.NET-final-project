@@ -40,6 +40,8 @@ namespace PixelPerfect.Core.Models
     {
         public int ItemId { get; set; }
         public int PortfolioId { get; set; }
+        // 新增：作品集类型
+        public string PortfolioType { get; set; }
         public string ImagePath { get; set; }
         public string ImageUrl { get; set; } // 图片完整访问URL
         public string ThumbnailUrl { get; set; } // 缩略图URL
@@ -157,6 +159,10 @@ namespace PixelPerfect.Core.Models
         public bool? IsBeforeImage { get; set; }
 
         public int? AfterImageId { get; set; }
+
+        // 注意：通常不允许通过更新请求改变作品项的类型
+        // 但是如果确实需要，可以添加以下字段
+        // public string PortfolioType { get; set; }
     }
 
     // 作品集搜索参数

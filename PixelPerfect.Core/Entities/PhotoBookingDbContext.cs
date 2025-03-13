@@ -321,6 +321,7 @@ public partial class PhotoBookingDbContext : DbContext
             entity.Property(e => e.IsBeforeImage).HasDefaultValueSql("'0'");
             entity.Property(e => e.Metadata).HasColumnType("json");
             entity.Property(e => e.PortfolioId).HasColumnName("PortfolioID");
+            entity.Property(e => e.PortfolioType).HasColumnType("enum('Photographer','Retoucher')");
             entity.Property(e => e.Title).HasMaxLength(100);
 
             entity.HasOne(d => d.AfterImage).WithMany(p => p.InverseAfterImage)
@@ -330,7 +331,7 @@ public partial class PhotoBookingDbContext : DbContext
 
             entity.HasOne(d => d.Portfolio).WithMany(p => p.Portfolioitems)
                 .HasForeignKey(d => d.PortfolioId)
-                .HasConstraintName("fk_portfolio_item");
+                .HasConstraintName("fk_photographer_portfolio_item");
 
             entity.HasOne(d => d.PortfolioNavigation).WithMany(p => p.Portfolioitems)
                 .HasForeignKey(d => d.PortfolioId)
