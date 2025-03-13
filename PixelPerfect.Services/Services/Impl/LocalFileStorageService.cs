@@ -114,30 +114,54 @@ namespace PixelPerfect.Services.Impl
 
                 string fullPath = Path.Combine(_baseStoragePath, filePath);
 
+                bool result = false;
                 if (File.Exists(fullPath))
                 {
                     File.Delete(fullPath);
-
-                    // 同时检查并删除缩略图
-                    string directory = Path.GetDirectoryName(fullPath);
-                    string thumbsDir = Path.Combine(directory, "thumbs");
-                    string filename = Path.GetFileName(fullPath);
-                    string thumbPath = Path.Combine(thumbsDir, $"thumb_{filename}");
-
-                    if (File.Exists(thumbPath))
-                        File.Delete(thumbPath);
-
-                    return true;
+                    result = true;
                 }
 
-                return false;
+                // 检查是否有关联的缩略图
+                // 方法1: 检查标准缩略图路径
+                string directory = Path.GetDirectoryName(fullPath);
+                string filename = Path.GetFileName(fullPath);
+                string thumbsDir = Path.Combine(directory, "thumbs");
+                string thumbPath = Path.Combine(thumbsDir, $"thumb_{filename}");
+
+                if (File.Exists(thumbPath))
+                {
+                    File.Delete(thumbPath);
+                    result = true;
+                }
+
+                // 方法2: 直接从filePath解析缩略图路径
+                if (filePath.Contains("/thumbs/"))
+                {
+                    // 已经是缩略图路径，不需额外处理
+                }
+                else
+                {
+                    // 构造可能的缩略图路径
+                    string dir = Path.GetDirectoryName(filePath).Replace("\\", "/");
+                    string file = Path.GetFileName(filePath);
+                    string possibleThumbPath = $"{dir}/thumbs/thumb_{file}".Replace("\\", "/");
+                    string fullThumbPath = Path.Combine(_baseStoragePath, possibleThumbPath);
+
+                    if (File.Exists(fullThumbPath))
+                    {
+                        File.Delete(fullThumbPath);
+                        result = true;
+                    }
+                }
+
+                return result;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error deleting file {filePath}: {ex.Message}");
                 return false;
             }
         }
-
         public async Task<string> GenerateThumbnailAsync(string originalPath, int maxWidth = 300, int maxHeight = 300)
         {
             if (string.IsNullOrEmpty(originalPath))
@@ -192,5 +216,46 @@ namespace PixelPerfect.Services.Impl
                 return originalPath;
             }
         }
+
+        public async Task CleanEmptyDirectoriesAsync(string basePath)
+        {
+            if (string.IsNullOrEmpty(basePath))
+                return;
+
+            // 从路径中移除 /uploads 前缀以获取正确的物理路径
+            if (basePath.StartsWith("/uploads/"))
+            {
+                basePath = basePath.Substring("/uploads/".Length);
+            }
+            else if (basePath.StartsWith("uploads/"))
+            {
+                basePath = basePath.Substring("uploads/".Length);
+            }
+
+            string fullPath = Path.Combine(_baseStoragePath, basePath);
+
+            if (!Directory.Exists(fullPath))
+                return;
+
+            try
+            {
+                // 递归清理空子目录
+                foreach (var dir in Directory.GetDirectories(fullPath))
+                {
+                    await CleanEmptyDirectoriesAsync(dir.Substring(_baseStoragePath.Length).TrimStart('\\', '/'));
+                }
+
+                // 检查目录是否为空（没有文件和子目录）
+                if (!Directory.GetFiles(fullPath).Any() && !Directory.GetDirectories(fullPath).Any())
+                {
+                    Directory.Delete(fullPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cleaning directory {fullPath}: {ex.Message}");
+            }
+        }
     }
+
 }

@@ -176,41 +176,49 @@ namespace PixelPerfect.Services.Impl
             return await _portfolioRepo.UpdatePhotographerPortfolioAsync(portfolio);
         }
 
+        // 摄影师作品集删除方法 - 保持一致性
         public async Task<bool> DeletePhotographerPortfolioAsync(int portfolioId)
         {
-            // 先删除作品集中的所有作品项
+            // 1. 获取作品集信息
+            var portfolio = await _portfolioRepo.GetPhotographerPortfolioByIdAsync(portfolioId);
+            if (portfolio == null)
+                return false;
+
+            // 2. 删除封面图片
+            var cover = await GetPortfolioCoverAsync(portfolioId, false);
+            if (cover != null)
+            {
+                await DeletePortfolioItemAsync(cover.ItemId);
+            }
+
+            // 3. 获取该作品集的所有项目并删除
             var items = await _portfolioRepo.GetPortfolioitemsByPortfolioIdAsync(portfolioId, "Photographer");
             foreach (var item in items)
             {
-                // 删除文件
-                if (!string.IsNullOrEmpty(item.ImagePath))
-                {
-                    await _fileStorage.DeleteFileAsync(item.ImagePath);
-
-                    // 尝试删除缩略图
-                    try
-                    {
-                        var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
-                        if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
-                        {
-                            string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
-                            if (!string.IsNullOrEmpty(thumbnailPath))
-                            {
-                                await _fileStorage.DeleteFileAsync(thumbnailPath);
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // 忽略元数据解析错误
-                    }
-                }
-
-                await _portfolioRepo.DeletePortfolioItemAsync(item.ItemId);
+                await DeletePortfolioItemAsync(item.ItemId);
             }
 
-            // 删除作品集
-            return await _portfolioRepo.DeletePhotographerPortfolioAsync(portfolioId);
+            // 4. 删除作品集记录
+            bool result = await _portfolioRepo.DeletePhotographerPortfolioAsync(portfolioId);
+
+            // 5. 清理空目录
+            if (result)
+            {
+                // 清理各种可能的文件夹路径
+                string portfolioDir = $"portfolio/photographer/{portfolioId}";
+                await _fileStorage.CleanEmptyDirectoriesAsync(portfolioDir);
+
+                string coverDir = $"portfolio/photographer/{portfolioId}/cover";
+                await _fileStorage.CleanEmptyDirectoriesAsync(coverDir);
+
+                string batchDir = $"portfolio/photographer/{portfolioId}/batch";
+                await _fileStorage.CleanEmptyDirectoriesAsync(batchDir);
+
+                // 如果上一级目录也是空的，也一并清理
+                await _fileStorage.CleanEmptyDirectoriesAsync("portfolio/photographer");
+            }
+
+            return result;
         }
 
         #endregion
@@ -359,41 +367,52 @@ namespace PixelPerfect.Services.Impl
             return await _portfolioRepo.UpdateRetoucherPortfolioAsync(portfolio);
         }
 
+        // 修图师作品集删除方法
         public async Task<bool> DeleteRetoucherPortfolioAsync(int portfolioId)
         {
-            // 先删除作品集中的所有作品项
+            // 1. 获取作品集信息
+            var portfolio = await _portfolioRepo.GetRetoucherPortfolioByIdAsync(portfolioId);
+            if (portfolio == null)
+                return false;
+
+            // 2. 删除封面图片
+            var cover = await GetPortfolioCoverAsync(portfolioId, true);
+            if (cover != null)
+            {
+                await DeletePortfolioItemAsync(cover.ItemId);
+            }
+
+            // 3. 获取该作品集的所有项目并删除
             var items = await _portfolioRepo.GetPortfolioitemsByPortfolioIdAsync(portfolioId, "Retoucher");
             foreach (var item in items)
             {
-                // 删除文件
-                if (!string.IsNullOrEmpty(item.ImagePath))
-                {
-                    await _fileStorage.DeleteFileAsync(item.ImagePath);
-
-                    // 尝试删除缩略图
-                    try
-                    {
-                        var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
-                        if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
-                        {
-                            string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
-                            if (!string.IsNullOrEmpty(thumbnailPath))
-                            {
-                                await _fileStorage.DeleteFileAsync(thumbnailPath);
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // 忽略元数据解析错误
-                    }
-                }
-
-                await _portfolioRepo.DeletePortfolioItemAsync(item.ItemId);
+                await DeletePortfolioItemAsync(item.ItemId);
             }
 
-            // 删除作品集
-            return await _portfolioRepo.DeleteRetoucherPortfolioAsync(portfolioId);
+            // 4. 删除作品集记录
+            bool result = await _portfolioRepo.DeleteRetoucherPortfolioAsync(portfolioId);
+
+            // 5. 清理空目录
+            if (result)
+            {
+                // 清理各种可能的文件夹路径
+                string portfolioDir = $"portfolio/retoucher/{portfolioId}";
+                await _fileStorage.CleanEmptyDirectoriesAsync(portfolioDir);
+
+                string coverDir = $"portfolio/retoucher/{portfolioId}/cover";
+                await _fileStorage.CleanEmptyDirectoriesAsync(coverDir);
+
+                string batchDir = $"portfolio/retoucher/{portfolioId}/batch";
+                await _fileStorage.CleanEmptyDirectoriesAsync(batchDir);
+
+                string beforeAfterDir = $"portfolio/retoucher/{portfolioId}/before-after";
+                await _fileStorage.CleanEmptyDirectoriesAsync(beforeAfterDir);
+
+                // 如果上一级目录也是空的，也一并清理
+                await _fileStorage.CleanEmptyDirectoriesAsync("portfolio/retoucher");
+            }
+
+            return result;
         }
 
         #endregion
@@ -535,39 +554,48 @@ namespace PixelPerfect.Services.Impl
             return await _portfolioRepo.UpdatePortfolioItemAsync(item);
         }
 
+        // 改进的作品项删除方法
         public async Task<bool> DeletePortfolioItemAsync(int itemId)
         {
             var item = await _portfolioRepo.GetPortfolioItemByIdAsync(itemId);
             if (item == null)
                 return false;
 
-            // 删除文件
+            // 删除主图片
             if (!string.IsNullOrEmpty(item.ImagePath))
             {
                 await _fileStorage.DeleteFileAsync(item.ImagePath);
+            }
 
-                // 尝试删除缩略图
+            // 处理元数据中的其他文件路径
+            if (!string.IsNullOrEmpty(item.Metadata))
+            {
                 try
                 {
                     var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(item.Metadata);
-                    if (metadataObj != null && metadataObj.ContainsKey("ThumbnailPath"))
+                    if (metadataObj != null)
                     {
-                        string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
-                        if (!string.IsNullOrEmpty(thumbnailPath))
+                        // 删除缩略图
+                        if (metadataObj.ContainsKey("ThumbnailPath"))
                         {
-                            await _fileStorage.DeleteFileAsync(thumbnailPath);
+                            string thumbnailPath = metadataObj["ThumbnailPath"].GetString();
+                            if (!string.IsNullOrEmpty(thumbnailPath))
+                            {
+                                await _fileStorage.DeleteFileAsync(thumbnailPath);
+                            }
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // 忽略元数据解析错误
+                    // 记录异常但继续执行
+                    Console.WriteLine($"Error parsing metadata for item {itemId}: {ex.Message}");
                 }
             }
 
+            // 删除数据库记录
             return await _portfolioRepo.DeletePortfolioItemAsync(itemId);
         }
-
         #endregion
 
         #region 新增方法 - 封面相关

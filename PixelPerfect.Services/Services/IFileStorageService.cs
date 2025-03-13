@@ -39,5 +39,7 @@ namespace PixelPerfect.Services
         /// <param name="maxHeight">最大高度</param>
         /// <returns>缩略图路径</returns>
         Task<string> GenerateThumbnailAsync(string originalPath, int maxWidth = 300, int maxHeight = 300);
+
+        Task CleanEmptyDirectoriesAsync(string basePath);
     }
 }
