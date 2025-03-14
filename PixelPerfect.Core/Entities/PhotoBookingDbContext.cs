@@ -54,6 +54,9 @@ public partial class PhotoBookingDbContext : DbContext
 
     public virtual DbSet<Userrolesview> Userrolesviews { get; set; }
 
+    // 在 DbContext 类中添加这一行
+    public virtual DbSet<RoleApplication> RoleApplications { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseMySql("server=localhost;port=3306;database=PhotoBookingDB;uid=root;pwd=IamSherlocked623", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.4.4-mysql"));
@@ -598,6 +601,51 @@ public partial class PhotoBookingDbContext : DbContext
             entity.Property(e => e.Roles).HasColumnType("text");
             entity.Property(e => e.UserId).HasColumnName("UserID");
             entity.Property(e => e.Username).HasMaxLength(50);
+        });
+
+        // 在 OnModelCreating 方法中添加以下配置
+        modelBuilder.Entity<RoleApplication>(entity =>
+        {
+            entity.HasKey(e => e.ApplicationId).HasName("PRIMARY");
+
+            entity.ToTable("roleapplications");
+
+            entity.HasIndex(e => e.ProcessedByUserId, "fk_admin_processed");
+
+            entity.HasIndex(e => e.UserId, "fk_user_application");
+
+            entity.HasIndex(e => e.RoleType, "idx_roletype");
+
+            entity.HasIndex(e => e.Status, "idx_status");
+
+            entity.Property(e => e.ApplicationId).HasColumnName("ApplicationID");
+            entity.Property(e => e.ApplicationData)
+                .HasComment("申请资料，包括资质证明等信息")
+                .HasColumnType("json");
+            entity.Property(e => e.Feedback)
+                .HasComment("管理员反馈意见")
+                .HasColumnType("text");
+            entity.Property(e => e.ProcessedAt).HasColumnType("datetime");
+            entity.Property(e => e.ProcessedByUserId)
+                .HasComment("处理申请的管理员ID")
+                .HasColumnName("ProcessedByUserID");
+            entity.Property(e => e.RoleType).HasColumnType("enum('Photographer','Retoucher')");
+            entity.Property(e => e.Status)
+                .HasDefaultValueSql("'Pending'")
+                .HasColumnType("enum('Pending','Approved','Rejected')");
+            entity.Property(e => e.SubmittedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("datetime");
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+
+            entity.HasOne(d => d.ProcessedByUser).WithMany(p => p.RoleApplicationProcessedByUsers)
+                .HasForeignKey(d => d.ProcessedByUserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_admin_processed");
+
+            entity.HasOne(d => d.User).WithMany(p => p.RoleApplicationUsers)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("fk_user_application");
         });
 
         OnModelCreatingPartial(modelBuilder);

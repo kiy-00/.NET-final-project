@@ -57,4 +57,8 @@ public partial class User
     public virtual ICollection<Retouchorder> Retouchorders { get; set; } = new List<Retouchorder>();
 
     public virtual ICollection<Userrole> Userroles { get; set; } = new List<Userrole>();
+
+    // 在 User 类中添加这些集合
+    public virtual ICollection<RoleApplication> RoleApplicationUsers { get; set; } = new List<RoleApplication>();
+    public virtual ICollection<RoleApplication> RoleApplicationProcessedByUsers { get; set; } = new List<RoleApplication>();
 }

@@ -128,6 +128,14 @@ namespace PixelPerfect
                         services.AddScoped<IPostService, PostService>();
                         services.AddScoped<ILikeService, LikeService>();
 
+                        // 在 Program.cs 中添加下列服务注册
+
+                        // 数据访问层
+                        services.AddScoped<PixelPerfect.DataAccess.Repos.RoleApplicationRepo>();
+
+                        // 服务层
+                        services.AddScoped<PixelPerfect.Services.IRoleApplicationService, PixelPerfect.Services.Impl.RoleApplicationService>();
+
                         // Swagger配置
                         services.AddSwaggerGen(c =>
                         {
