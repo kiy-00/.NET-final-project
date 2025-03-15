@@ -110,7 +110,8 @@ namespace PixelPerfect.Controllers
             }
         }
 
-        // 搜索修图师
+        // 原搜索接口(标记为弃用)
+        [Obsolete("This method is deprecated. Use SearchRetouchersV2 instead.")]
         [HttpGet("search")]
         public async Task<IActionResult> SearchRetouchers([FromQuery] RetoucherSearchParams searchParams)
         {
@@ -122,6 +123,35 @@ namespace PixelPerfect.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while searching retouchers." });
+            }
+        }
+
+        // 新的灵活搜索接口
+        [HttpGet("search/v2")]
+        public async Task<IActionResult> SearchRetouchersV2(
+            [FromQuery] string? keyword = null,
+            [FromQuery] decimal? minPrice = null,
+            [FromQuery] decimal? maxPrice = null,
+            [FromQuery] bool verifiedOnly = true)
+        {
+            try
+            {
+                // 创建新的搜索参数对象
+                var searchParams = new RetoucherSearchParamsV2
+                {
+                    Keyword = keyword,
+                    MinPrice = minPrice,
+                    MaxPrice = maxPrice,
+                    VerifiedOnly = verifiedOnly
+                };
+
+                // 调用服务层方法执行搜索
+                var retouchers = await _retoucherService.SearchRetouchersV2Async(searchParams);
+                return Ok(retouchers);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while searching retouchers.", error = ex.Message });
             }
         }
     }

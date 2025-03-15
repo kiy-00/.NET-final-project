@@ -60,4 +60,17 @@ namespace PixelPerfect.Core.Models
         public decimal? MaxPrice { get; set; }
         public bool VerifiedOnly { get; set; } = true;
     }
+
+    public class RetoucherSearchParamsV2
+    {
+        // 单一关键词，可搜索多个字段
+        public string? Keyword { get; set; }
+
+        // 价格区间（可选）
+        public decimal? MinPrice { get; set; }
+        public decimal? MaxPrice { get; set; }
+
+        // 是否只显示已验证修图师
+        public bool VerifiedOnly { get; set; } = true;
+    }
 }

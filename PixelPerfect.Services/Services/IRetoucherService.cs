@@ -19,5 +19,8 @@ namespace PixelPerfect.Services
 
         // 搜索修图师
         Task<List<RetoucherDto>> SearchRetouchersAsync(RetoucherSearchParams searchParams);
+
+        // 新增方法
+        Task<List<RetoucherDto>> SearchRetouchersV2Async(RetoucherSearchParamsV2 searchParams);
     }
 }
