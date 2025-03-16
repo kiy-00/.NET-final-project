@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace PixelPerfect.Services.Impl
 {
-    
+
     public class PhotoService : IPhotoService
     {
         private readonly PhotoBookingDbContext _context;
@@ -284,6 +284,10 @@ namespace PixelPerfect.Services.Impl
             if (photo.IsPublic)
                 return true;
 
+            // 如果照片没有关联预约，则不能通过预约检查访问权限
+            if (photo.Booking == null)
+                return false;
+
             // 预约的用户可见
             if (photo.Booking.UserId == userId)
                 return true;
@@ -298,7 +302,7 @@ namespace PixelPerfect.Services.Impl
         public async Task<bool> IsPhotographerPhotoAsync(int photoId, int photographerId)
         {
             var photo = await _photoRepo.GetByIdAsync(photoId);
-            if (photo == null)
+            if (photo == null || photo.Booking == null)
                 return false;
 
             return photo.Booking.PhotographerId == photographerId;
@@ -313,7 +317,7 @@ namespace PixelPerfect.Services.Impl
             try
             {
                 // 使用文件存储服务保存文件
-                string directory = $"uploads/general/{userId}";
+                string directory = $"general/{userId}";
                 string filePath = await _fileStorage.SaveFileAsync(file, directory);
 
                 // 生成缩略图
@@ -337,7 +341,7 @@ namespace PixelPerfect.Services.Impl
                 // 创建照片记录 - 注意我们根据您现有的Photo实体结构进行调整
                 var newPhoto = new Photo
                 {
-                    BookingId = 0,  // 使用默认值，因为这不是预约相关的照片
+                    BookingId = null,  // 使用null而不是0
                     ImagePath = filePath,
                     Title = title ?? Path.GetFileNameWithoutExtension(file.FileName),
                     Description = description ?? $"Uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
@@ -371,7 +375,7 @@ namespace PixelPerfect.Services.Impl
             try
             {
                 // 使用文件存储服务保存文件
-                string directory = $"uploads/portfolio/covers/{userId}";
+                string directory = $"portfolio/covers/{userId}";
                 string filePath = await _fileStorage.SaveFileAsync(file, directory);
 
                 // 生成缩略图
@@ -395,7 +399,7 @@ namespace PixelPerfect.Services.Impl
                 // 创建照片记录
                 var newPhoto = new Photo
                 {
-                    BookingId = 0,  // 使用默认值
+                    BookingId = null,  // 使用null而不是0
                     ImagePath = filePath,
                     Title = "Portfolio Cover",
                     Description = $"Portfolio cover uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
@@ -433,7 +437,7 @@ namespace PixelPerfect.Services.Impl
 
             try
             {
-                string directory = $"uploads/portfolio/items/{userId}";
+                string directory = $"portfolio/items/{userId}";
 
                 // 上传主图
                 string mainFilePath = await _fileStorage.SaveFileAsync(mainFile, directory);
@@ -473,7 +477,7 @@ namespace PixelPerfect.Services.Impl
                 // 创建照片记录
                 var newPhoto = new Photo
                 {
-                    BookingId = 0,  // 使用默认值
+                    BookingId = null,  // 使用null而不是0
                     ImagePath = mainFilePath,
                     Title = title ?? Path.GetFileNameWithoutExtension(mainFile.FileName),
                     Description = description ?? $"Portfolio item uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
@@ -509,7 +513,7 @@ namespace PixelPerfect.Services.Impl
             try
             {
                 // 使用文件存储服务保存文件
-                string directory = $"uploads/temp/{userId}";
+                string directory = $"temp/{userId}";
                 string filePath = await _fileStorage.SaveFileAsync(file, directory);
 
                 // 生成缩略图
@@ -534,7 +538,7 @@ namespace PixelPerfect.Services.Impl
                 // 创建照片记录
                 var newPhoto = new Photo
                 {
-                    BookingId = 0,  // 使用默认值
+                    BookingId = null,  // 使用null而不是0
                     ImagePath = filePath,
                     Title = Path.GetFileNameWithoutExtension(file.FileName),
                     Description = $"Temporary file, expires on {DateTime.UtcNow.AddDays(7):yyyy-MM-dd}",
@@ -556,6 +560,40 @@ namespace PixelPerfect.Services.Impl
             catch (Exception ex)
             {
                 throw new ApplicationException("上传临时图片时发生错误", ex);
+            }
+        }
+
+        public async Task<bool> ConvertTempPhotoToOrderPhotoAsync(int photoId)
+        {
+            var photo = await _photoRepo.GetByIdAsync(photoId);
+            if (photo == null)
+                return false;
+
+            try
+            {
+                // 检查是否为临时照片
+                var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(photo.Metadata ?? "{}");
+                var isTemp = metadataObj != null &&
+                            metadataObj.ContainsKey("UploadType") &&
+                            metadataObj["UploadType"].GetString() == "Temporary";
+
+                if (!isTemp)
+                    return false;  // 不是临时照片
+
+                // 更新元数据，修改类型和删除过期时间
+                metadataObj["UploadType"] = JsonSerializer.Deserialize<JsonElement>("\"RetouchOrderPhoto\"");
+                if (metadataObj.ContainsKey("ExpiryDate"))
+                    metadataObj.Remove("ExpiryDate");
+
+                // 更新照片记录
+                photo.Metadata = JsonSerializer.Serialize(metadataObj);
+
+                return await _photoRepo.UpdateAsync(photo);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"转换临时照片失败: {ex.Message}");
+                return false;
             }
         }
 

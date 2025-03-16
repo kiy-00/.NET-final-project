@@ -19,7 +19,7 @@ namespace PixelPerfect.Services
         Task<bool> UpdateBookingPublicStatusAsync(int bookingId, bool isPublic);
 
         // 权限检查
-        Task<bool> IsUserBookingAsync(int bookingId, int userId);
+        Task<bool> IsUserBookingAsync(int? bookingId, int userId);
         Task<bool> IsPhotographerBookingAsync(int bookingId, int photographerId);
     }
 }

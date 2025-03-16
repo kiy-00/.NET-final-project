@@ -7,7 +7,7 @@ public partial class Photo
 {
     public int PhotoId { get; set; }
 
-    public int BookingId { get; set; }
+    public int? BookingId { get; set; }
 
     public string ImagePath { get; set; } = null!;
 

@@ -136,6 +136,12 @@ namespace PixelPerfect
                         // 服务层
                         services.AddScoped<PixelPerfect.Services.IRoleApplicationService, PixelPerfect.Services.Impl.RoleApplicationService>();
 
+
+                        // 注册关注功能相关仓库
+                        services.AddScoped<FollowRepo>();
+                        // 注册关注功能相关服务
+                        services.AddScoped<IFollowService, FollowService>();
+
                         // Swagger配置
                         services.AddSwaggerGen(c =>
                         {

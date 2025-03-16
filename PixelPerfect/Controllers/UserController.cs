@@ -586,19 +586,12 @@ namespace PixelPerfect.Controllers
 
 
         // 获取用户对应的修图师ID
+        [Authorize] // 只要求用户登录，不再检查是否为本人或管理员
         [HttpGet("{userId}/retoucher-id")]
         public async Task<IActionResult> GetRetoucherIdByUserId(int userId)
         {
             try
             {
-                // 只允许当前用户或管理员查询
-                if (User.Identity.IsAuthenticated)
-                {
-                    var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-                    if (currentUserId != userId && !User.IsInRole("Admin"))
-                        return StatusCode(403, new { message = "You are not authorized to access this information." });
-                }
-
                 var retoucherId = await _userService.GetRetoucherIdByUserIdAsync(userId);
 
                 if (retoucherId.HasValue)
@@ -613,19 +606,12 @@ namespace PixelPerfect.Controllers
         }
 
         // 获取用户对应的摄影师ID
+        [Authorize] // 只要求用户登录，不再检查是否为本人或管理员
         [HttpGet("{userId}/photographer-id")]
         public async Task<IActionResult> GetPhotographerIdByUserId(int userId)
         {
             try
             {
-                // 只允许当前用户或管理员查询
-                if (User.Identity.IsAuthenticated)
-                {
-                    var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-                    if (currentUserId != userId && !User.IsInRole("Admin"))
-                        return StatusCode(403, new { message = "You are not authorized to access this information." });
-                }
-
                 var photographerId = await _userService.GetPhotographerIdByUserIdAsync(userId);
 
                 if (photographerId.HasValue)

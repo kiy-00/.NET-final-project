@@ -157,9 +157,11 @@ namespace PixelPerfect.Services.Impl
             return await _bookingRepo.UpdateAsync(booking);
         }
 
-        public async Task<bool> IsUserBookingAsync(int bookingId, int userId)
+        public async Task<bool> IsUserBookingAsync(int? bookingId, int userId)
         {
-            var booking = await _bookingRepo.GetByIdAsync(bookingId);
+            if (!bookingId.HasValue)
+                return false;  // 如果没有关联预约，用户不能是预约客户
+            var booking = await _bookingRepo.GetByIdAsync(bookingId.Value);
             if (booking == null)
                 return false;
 
