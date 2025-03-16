@@ -76,9 +76,9 @@ namespace PixelPerfect.Services.Impl
             if (photo == null)
                 throw new KeyNotFoundException($"Photo with ID {request.PhotoId} not found.");
 
-            // 检查用户是否是照片的拥有者
-            if (photo.Booking.UserId != userId)
-                throw new UnauthorizedAccessException("User is not the owner of the photo.");
+            //// 检查用户是否是照片的拥有者
+            //if (photo.Booking.UserId != userId)
+            //    throw new UnauthorizedAccessException("User is not the owner of the photo.");
 
             // 检查照片是否已经有修图订单
             var existingOrders = await _retouchOrderRepo.GetByPhotoIdAsync(request.PhotoId);
