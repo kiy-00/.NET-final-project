@@ -18,19 +18,23 @@ namespace PixelPerfect.Services.Impl
         private readonly PhotoBookingDbContext _context;
         private readonly PhotoRepo _photoRepo;
         private readonly BookingRepo _bookingRepo;
+        private readonly RetouchOrderRepo _retouchOrderRepo;
         private readonly IFileStorageService _fileStorage;
         private readonly IConfiguration _config;
 
+        // 在构造函数中添加
         public PhotoService(
-           PhotoBookingDbContext context,
+            PhotoBookingDbContext context,
             PhotoRepo photoRepo,
             BookingRepo bookingRepo,
+            RetouchOrderRepo retouchOrderRepo, // 新增
             IFileStorageService fileStorage,
             IConfiguration config)
         {
             _context = context;
             _photoRepo = photoRepo;
             _bookingRepo = bookingRepo;
+            _retouchOrderRepo = retouchOrderRepo; // 新增
             _fileStorage = fileStorage;
             _config = config;
         }
@@ -284,17 +288,32 @@ namespace PixelPerfect.Services.Impl
             if (photo.IsPublic)
                 return true;
 
-            // 如果照片没有关联预约，则不能通过预约检查访问权限
-            if (photo.Booking == null)
-                return false;
+            // 1. 检查预约相关权限
+            if (photo.Booking != null)
+            {
+                // 预约的用户可见
+                if (photo.Booking.UserId == userId)
+                    return true;
 
-            // 预约的用户可见
-            if (photo.Booking.UserId == userId)
-                return true;
+                // 摄影师可见
+                if (photo.Booking.Photographer.UserId == userId)
+                    return true;
+            }
 
-            // 摄影师可见
-            if (photo.Booking.Photographer.UserId == userId)
-                return true;
+            // 2. 新增: 检查是否是修图订单相关照片
+            var retouchOrders = await _retouchOrderRepo.GetOrdersByPhotoOrRetouchedPhotoIdAsync(photoId);
+
+            // 如果是订单相关照片，允许订单的客户和修图师访问
+            foreach (var order in retouchOrders)
+            {
+                // 订单创建者可以访问
+                if (order.UserId == userId)
+                    return true;
+
+                // 修图师可以访问
+                if (order.Retoucher != null && order.Retoucher.UserId == userId)
+                    return true;
+            }
 
             return false;
         }

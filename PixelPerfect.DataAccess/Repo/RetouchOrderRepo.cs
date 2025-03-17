@@ -115,4 +115,16 @@ public class RetouchOrderRepo
         var affected = await _context.SaveChangesAsync();
         return affected > 0;
     }
+
+    public async Task<List<Retouchorder>> GetOrdersByPhotoOrRetouchedPhotoIdAsync(int photoId)
+    {
+        return await _context.Retouchorders
+            .Include(o => o.User)
+            .Include(o => o.Retoucher)
+                .ThenInclude(r => r.User)
+            .Include(o => o.Photo)
+            .Include(o => o.RetouchedPhoto)
+            .Where(o => o.PhotoId == photoId || o.RetouchedPhotoId == photoId)
+            .ToListAsync();
+    }
 }
