@@ -220,7 +220,7 @@ namespace PixelPerfect.Controllers
         // 完成修图订单（仅修图师）
         [HttpPut("{orderId}/complete")]
         [Authorize]
-        public async Task<IActionResult> CompleteOrder(int orderId, [FromBody] RetouchOrderCompleteRequest request)
+        public async Task<IActionResult> CompleteOrder(int orderId, [FromForm] RetouchOrderCompleteRequest request)
         {
             try
             {
@@ -237,9 +237,31 @@ namespace PixelPerfect.Controllers
                 if (!isRetoucherOrder && !User.IsInRole("Admin"))
                     return Forbid();
 
-                var success = await _retouchOrderService.CompleteOrderAsync(orderId);
-                if (success)
-                    return Ok(new { message = "Order completed successfully." });
+                // 验证上传的文件
+                if (request.RetouchedPhoto == null || request.RetouchedPhoto.Length == 0)
+                    return BadRequest(new { message = "No file uploaded or empty file." });
+
+                // 检查文件类型
+                var validImageTypes = new[] { "image/jpeg", "image/png" };
+                if (!validImageTypes.Contains(request.RetouchedPhoto.ContentType.ToLower()))
+                    return BadRequest(new { message = "Invalid file type. Only JPEG and PNG images are allowed." });
+
+                // 上传文件并获取URL
+                var uploadResult = await _photoService.UploadGeneralPhotoAsync(
+                    userId,
+                    request.RetouchedPhoto,
+                    $"Retouched Photo - Order #{orderId}",
+                    request.Comment ?? $"Retouched photo uploaded on {DateTime.UtcNow:yyyy-MM-dd}"
+                );
+
+                // 获取照片URL
+                string retouchedPhotoUrl = uploadResult.Url;
+
+                // 完成订单并保存URL
+                var result = await _retouchOrderService.CompleteOrderWithPhotoAsync(orderId, request.RetouchedPhoto, request);
+
+                if (result != null)
+                    return Ok(new { message = "Order completed successfully.", order = result });
                 else
                     return BadRequest(new { message = "Failed to complete order." });
             }
@@ -253,7 +275,7 @@ namespace PixelPerfect.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while completing the order." });
+                return StatusCode(500, new { message = $"An error occurred while completing the order: {ex.Message}" });
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 namespace PixelPerfect.Core.Models
 {
     // 修图订单DTO
@@ -43,13 +44,16 @@ namespace PixelPerfect.Core.Models
     }
 
     // 完成修图订单请求 - 简化为只上传照片
+    // 完成修图订单请求 - 包含上传的修图结果照片
     public class RetouchOrderCompleteRequest
     {
         // 保留原有注释字段以便客户添加备注
         [StringLength(500)]
         public string Comment { get; set; }
 
-        // 照片相关信息将通过FormFile上传，不在此DTO中定义
+        // 添加修图结果照片上传字段
+        [Required(ErrorMessage = "Retouched photo is required")]
+        public IFormFile RetouchedPhoto { get; set; }
     }
 
     // 修图订单搜索参数

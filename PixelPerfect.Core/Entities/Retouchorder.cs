@@ -10,6 +10,7 @@ public partial class Retouchorder
     public int? RetouchedPhotoId { get; set; }  // 新增字段
     public string Status { get; set; } = null!;
     public string? Requirements { get; set; }
+    public string? Comment { get; set; }  // 新增字段 - 修图师的评论
     public decimal Price { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }

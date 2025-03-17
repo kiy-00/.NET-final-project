@@ -152,9 +152,71 @@ namespace PixelPerfect.Services.Impl
             return await _retouchOrderRepo.UpdateAsync(order);
         }
 
+        // 新增 - 完成修图订单并保存修图后照片URL
+        public async Task<bool> CompleteOrderAsync(int orderId, string retouchedPhotoUrl, string comment = null)
+        {
+            var order = await _retouchOrderRepo.GetByIdAsync(orderId);
+            if (order == null)
+                throw new KeyNotFoundException($"Order with ID {orderId} not found.");
+
+            if (order.Status != "InProgress")
+                throw new InvalidOperationException("Only orders in 'InProgress' status can be completed.");
+
+            // 使用事务确保数据一致性
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    // 如果提供了URL，创建新的照片记录
+                    if (!string.IsNullOrEmpty(retouchedPhotoUrl))
+                    {
+                        // 创建新的照片记录
+                        var retouchedPhoto = new Photo
+                        {
+                            BookingId = null, // 修图后的照片不关联到预约
+                            ImagePath = retouchedPhotoUrl,
+                            Title = $"Retouched Photo for Order {orderId}",
+                            Description = comment,
+                            IsPublic = false, // 默认不公开
+                            ClientApproved = false, // 需要客户确认
+                            UploadedAt = DateTime.UtcNow
+                        };
+
+                        // 添加照片到数据库
+                        var createdPhoto = await _photoRepo.CreateAsync(retouchedPhoto);
+
+                        // 更新订单关联修图后照片
+                        await _retouchOrderRepo.UpdateRetouchedPhotoIdAsync(orderId, createdPhoto.PhotoId);
+                    }
+
+                    // 更新订单状态
+                    order.Status = "Completed";
+                    order.CompletedAt = DateTime.UtcNow;
+                    await _retouchOrderRepo.UpdateAsync(order);
+
+                    // 发送通知给用户
+                    var notificationRequest = new NotificationCreateRequest
+                    {
+                        UserId = order.UserId,
+                        Title = "修图已完成",
+                        Content = $"您的照片修图已完成，请查看结果。",
+                        Type = "Booking"
+                    };
+
+                    await _notificationService.CreateNotificationAsync(notificationRequest);
+
+                    await transaction.CommitAsync();
+                    return true;
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+        }
+
         // 新增 - 完成修图订单并上传修图后照片
-        // 修正后的 CompleteOrderWithPhotoAsync 方法
-        // 修正后的 CompleteOrderWithPhotoAsync 方法
         public async Task<RetouchOrderDto> CompleteOrderWithPhotoAsync(int orderId, IFormFile photoFile, RetouchOrderCompleteRequest request)
         {
             if (photoFile == null)
