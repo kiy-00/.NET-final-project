@@ -1,4 +1,5 @@
 ﻿using PixelPerfect.Core.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace PixelPerfect.Services
 {
@@ -10,14 +11,13 @@ namespace PixelPerfect.Services
         Task<List<RetouchOrderDto>> GetOrdersByRetoucherIdAsync(int retoucherId);
         Task<List<RetouchOrderDto>> GetOrdersByPhotoIdAsync(int photoId);
         Task<List<RetouchOrderDto>> SearchOrdersAsync(RetouchOrderSearchParams searchParams);
-
         // 创建修图订单
         Task<RetouchOrderDto> CreateOrderAsync(int userId, RetouchOrderCreateRequest request);
-
         // 更新修图订单
         Task<bool> UpdateOrderStatusAsync(int orderId, string status);
         Task<bool> CompleteOrderAsync(int orderId);
-
+        // 新增 - 完成修图订单并上传修图后照片
+        Task<RetouchOrderDto> CompleteOrderWithPhotoAsync(int orderId, IFormFile photoFile, RetouchOrderCompleteRequest request);
         // 权限检查
         Task<bool> IsUserOrderAsync(int orderId, int userId);
         Task<bool> IsRetoucherOrderAsync(int orderId, int retoucherId);

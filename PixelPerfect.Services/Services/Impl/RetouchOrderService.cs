@@ -1,6 +1,7 @@
 ﻿using PixelPerfect.Core.Entities;
 using PixelPerfect.Core.Models;
 using PixelPerfect.DataAccess.Repos;
+using Microsoft.AspNetCore.Http;
 
 namespace PixelPerfect.Services.Impl
 {
@@ -10,17 +11,23 @@ namespace PixelPerfect.Services.Impl
         private readonly RetouchOrderRepo _retouchOrderRepo;
         private readonly RetoucherRepo _retoucherRepo;
         private readonly PhotoRepo _photoRepo;
+        private readonly IFileStorageService _fileStorageService;
+        private readonly INotificationService _notificationService;
 
         public RetouchOrderService(
            PhotoBookingDbContext context,
             RetouchOrderRepo retouchOrderRepo,
             RetoucherRepo retoucherRepo,
-            PhotoRepo photoRepo)
+            PhotoRepo photoRepo,
+            IFileStorageService fileStorageService,
+            INotificationService notificationService)
         {
             _context = context;
             _retouchOrderRepo = retouchOrderRepo;
             _retoucherRepo = retoucherRepo;
             _photoRepo = photoRepo;
+            _fileStorageService = fileStorageService;
+            _notificationService = notificationService;
         }
 
         public async Task<RetouchOrderDto> GetOrderByIdAsync(int orderId)
@@ -94,6 +101,7 @@ namespace PixelPerfect.Services.Impl
                 UserId = userId,
                 RetoucherId = request.RetoucherId,
                 PhotoId = request.PhotoId,
+                RetouchedPhotoId = null, // 初始为空
                 Status = "Pending", // 初始状态为待确认
                 Requirements = request.Requirements,
                 Price = price,
@@ -144,6 +152,86 @@ namespace PixelPerfect.Services.Impl
             return await _retouchOrderRepo.UpdateAsync(order);
         }
 
+        // 新增 - 完成修图订单并上传修图后照片
+        // 修正后的 CompleteOrderWithPhotoAsync 方法
+        // 修正后的 CompleteOrderWithPhotoAsync 方法
+        public async Task<RetouchOrderDto> CompleteOrderWithPhotoAsync(int orderId, IFormFile photoFile, RetouchOrderCompleteRequest request)
+        {
+            if (photoFile == null)
+                throw new ArgumentNullException(nameof(photoFile), "Retouched photo file is required.");
+
+            var order = await _retouchOrderRepo.GetByIdAsync(orderId);
+            if (order == null)
+                throw new KeyNotFoundException($"Order with ID {orderId} not found.");
+
+            if (order.Status != "InProgress")
+                throw new InvalidOperationException("Only orders in 'InProgress' status can be completed.");
+
+            // 使用事务确保数据一致性
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    // 1. 上传修图后的照片
+                    string fileName = await _fileStorageService.SaveFileAsync(
+                        photoFile,
+                        "photos", // 使用photos目录与其他照片保持一致
+                        Path.GetRandomFileName() + Path.GetExtension(photoFile.FileName)
+                    );
+
+                    // 2. 创建新的照片记录
+                    var retouchedPhoto = new Photo
+                    {
+                        BookingId = null, // 修图后的照片不关联到预约
+                        ImagePath = fileName,
+                        Title = Path.GetFileNameWithoutExtension(photoFile.FileName),
+                        Description = request.Comment,
+                        IsPublic = false, // 默认不公开
+                        ClientApproved = false, // 需要客户确认
+                        UploadedAt = DateTime.UtcNow
+                    };
+
+                    // 3. 添加照片到数据库
+                    var createdPhoto = await _photoRepo.CreateAsync(retouchedPhoto);
+
+                    // 4. 更新订单关联修图后照片
+                    await _retouchOrderRepo.UpdateRetouchedPhotoIdAsync(orderId, createdPhoto.PhotoId);
+
+                    // 5. 尝试生成缩略图
+                    try
+                    {
+                        await _fileStorageService.GenerateThumbnailAsync(fileName);
+                    }
+                    catch (Exception)
+                    {
+                        // 生成缩略图失败不影响主流程
+                        // 如果有日志系统，可以记录错误
+                    }
+
+                    // 6. 发送通知给用户
+                    var notificationRequest = new NotificationCreateRequest
+                    {
+                        UserId = order.UserId,
+                        Title = "修图已完成",
+                        Content = $"您的照片修图已完成，请查看结果。",
+                        Type = "Booking"
+                    };
+
+                    await _notificationService.CreateNotificationAsync(notificationRequest);
+
+                    await transaction.CommitAsync();
+
+                    // 返回更新后的订单信息
+                    return await GetOrderByIdAsync(orderId);
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+        }
+
         public async Task<bool> IsUserOrderAsync(int orderId, int userId)
         {
             var order = await _retouchOrderRepo.GetByIdAsync(orderId);
@@ -175,6 +263,10 @@ namespace PixelPerfect.Services.Impl
                 PhotoId = order.PhotoId,
                 PhotoTitle = order.Photo?.Title,
                 PhotoPath = order.Photo?.ImagePath,
+                // 新增修图后照片的信息
+                RetouchedPhotoId = order.RetouchedPhotoId,
+                RetouchedPhotoTitle = order.RetouchedPhoto?.Title,
+                RetouchedPhotoPath = order.RetouchedPhoto?.ImagePath,
                 Status = order.Status,
                 Requirements = order.Requirements,
                 Price = order.Price,

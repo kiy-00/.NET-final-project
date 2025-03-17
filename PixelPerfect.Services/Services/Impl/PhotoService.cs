@@ -563,39 +563,7 @@ namespace PixelPerfect.Services.Impl
             }
         }
 
-        public async Task<bool> ConvertTempPhotoToOrderPhotoAsync(int photoId)
-        {
-            var photo = await _photoRepo.GetByIdAsync(photoId);
-            if (photo == null)
-                return false;
 
-            try
-            {
-                // 检查是否为临时照片
-                var metadataObj = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(photo.Metadata ?? "{}");
-                var isTemp = metadataObj != null &&
-                            metadataObj.ContainsKey("UploadType") &&
-                            metadataObj["UploadType"].GetString() == "Temporary";
-
-                if (!isTemp)
-                    return false;  // 不是临时照片
-
-                // 更新元数据，修改类型和删除过期时间
-                metadataObj["UploadType"] = JsonSerializer.Deserialize<JsonElement>("\"RetouchOrderPhoto\"");
-                if (metadataObj.ContainsKey("ExpiryDate"))
-                    metadataObj.Remove("ExpiryDate");
-
-                // 更新照片记录
-                photo.Metadata = JsonSerializer.Serialize(metadataObj);
-
-                return await _photoRepo.UpdateAsync(photo);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"转换临时照片失败: {ex.Message}");
-                return false;
-            }
-        }
 
         // 辅助方法 - 实体映射到DTO
         private PhotoDto MapToDto(Photo photo)
