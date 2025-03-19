@@ -57,6 +57,8 @@ public partial class PhotoBookingDbContext : DbContext
     // 在 DbContext 类中添加这一行
     public virtual DbSet<RoleApplication> RoleApplications { get; set; }
 
+    public virtual DbSet<Payment> Payments { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseMySql("server=localhost;port=3306;database=PhotoBookingDB;uid=root;pwd=IamSherlocked623", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.4.4-mysql"));
@@ -646,6 +648,61 @@ public partial class PhotoBookingDbContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.RoleApplicationUsers)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("fk_user_application");
+        });
+
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.HasKey(e => e.PaymentId).HasName("PRIMARY");
+
+            entity.ToTable("payments");
+
+            entity.HasIndex(e => e.UserId, "idx_user");
+            entity.HasIndex(e => new { e.OrderType, e.OrderId }, "idx_order");
+            entity.HasIndex(e => e.Status, "idx_status");
+
+            entity.Property(e => e.PaymentId).HasColumnName("PaymentID");
+            entity.Property(e => e.UserId).HasColumnName("UserID");
+            entity.Property(e => e.OrderId).HasColumnName("OrderID");
+            entity.Property(e => e.OrderType).HasColumnType("enum('Booking','RetouchOrder')");
+            entity.Property(e => e.Amount).HasPrecision(10, 2);
+            entity.Property(e => e.PaymentMethod).HasColumnType("enum('Wechat','Alipay','BankTransfer','CreditCard')");
+            entity.Property(e => e.TransactionId).HasMaxLength(100).HasColumnName("TransactionID");
+            entity.Property(e => e.Status)
+                .HasDefaultValueSql("'Pending'")
+                .HasColumnType("enum('Pending','Completed','Failed','Refunded')");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("datetime");
+            entity.Property(e => e.UpdatedAt)
+                .ValueGeneratedOnAddOrUpdate()
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Payments)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("fk_user_payment");
+        });
+
+        // 修改 Booking 实体配置，添加 PaymentStatus 属性
+        modelBuilder.Entity<Booking>(entity =>
+        {
+            // 保留原有配置...
+
+            entity.HasIndex(e => e.PaymentStatus, "idx_payment_status");
+            entity.Property(e => e.PaymentStatus)
+                .HasDefaultValueSql("'Unpaid'")
+                .HasColumnType("enum('Unpaid','Paid','Refunded')");
+        });
+
+        // 修改 Retouchorder 实体配置，添加 PaymentStatus 属性
+        modelBuilder.Entity<Retouchorder>(entity =>
+        {
+            // 保留原有配置...
+
+            entity.HasIndex(e => e.PaymentStatus, "idx_payment_status");
+            entity.Property(e => e.PaymentStatus)
+                .HasDefaultValueSql("'Unpaid'")
+                .HasColumnType("enum('Unpaid','Paid','Refunded')");
         });
 
         OnModelCreatingPartial(modelBuilder);

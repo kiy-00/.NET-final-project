@@ -31,6 +31,8 @@ public partial class Booking
 
     public bool IsPublic { get; set; }
 
+    public string PaymentStatus { get; set; } = "Unpaid"; // "Unpaid", "Paid", "Refunded"
+
     public virtual ICollection<Bookingservice> Bookingservices { get; set; } = new List<Bookingservice>();
 
     public virtual Photographer Photographer { get; set; } = null!;

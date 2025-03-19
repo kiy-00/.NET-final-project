@@ -61,4 +61,6 @@ public partial class User
     // 在 User 类中添加这些集合
     public virtual ICollection<RoleApplication> RoleApplicationUsers { get; set; } = new List<RoleApplication>();
     public virtual ICollection<RoleApplication> RoleApplicationProcessedByUsers { get; set; } = new List<RoleApplication>();
+
+    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }

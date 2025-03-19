@@ -18,4 +18,8 @@ public partial class Retouchorder
     public virtual Photo? RetouchedPhoto { get; set; }  // 新增导航属性
     public virtual Retoucher Retoucher { get; set; } = null!;
     public virtual User User { get; set; } = null!;
+
+
+    public string PaymentStatus { get; set; } = "Unpaid"; // "Unpaid", "Paid", "Refunded"
+
 }
