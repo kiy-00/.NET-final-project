@@ -191,6 +191,58 @@ public class PaymentService : IPaymentService
         }
     }
 
+    public async Task<PaymentStatusResponse> GetOrderPaymentStatus(string orderType, int orderId)
+    {
+        // 获取订单的所有支付记录，按创建时间降序排列（最新的排在前面）
+        var payments = await _paymentRepo.GetPaymentsByOrder(orderType, orderId);
+
+        if (payments == null || !payments.Any())
+        {
+            return new PaymentStatusResponse
+            {
+                Status = "None",
+                IsPaid = false,
+                Amount = 0,
+                PaymentDate = null,
+                PaymentMethod = null
+            };
+        }
+
+        // 获取最新的支付记录
+        var latestPayment = payments.OrderByDescending(p => p.CreatedAt).First();
+
+        // 检查支付状态
+        bool isPaid = latestPayment.Status == "Completed";
+
+        // 获取支付时间（如果已支付）
+        DateTime? paymentDate = latestPayment.Status == "Completed" ?
+            latestPayment.UpdatedAt : null;
+
+        return new PaymentStatusResponse
+        {
+            Status = latestPayment.Status,
+            IsPaid = isPaid,
+            Amount = latestPayment.Amount,
+            PaymentDate = paymentDate,
+            PaymentMethod = latestPayment.PaymentMethod
+        };
+    }
+
+    public async Task<List<PaymentResponse>> GetPaymentsByUserIdAndStatus(int userId, string status, string orderType = null)
+    {
+        // 首先获取用户的所有支付记录
+        var allUserPayments = await _paymentRepo.GetPaymentsByUserId(userId);
+
+        // 过滤符合条件的支付记录
+        var filteredPayments = allUserPayments
+            .Where(p => p.Status.Equals(status, StringComparison.OrdinalIgnoreCase))
+            .Where(p => orderType == null || p.OrderType.Equals(orderType, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        // 将实体转换为响应模型
+        return filteredPayments.Select(MapToPaymentResponse).ToList();
+    }
+
     private PaymentResponse MapToPaymentResponse(Payment payment)
     {
         return new PaymentResponse

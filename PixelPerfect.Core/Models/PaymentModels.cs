@@ -47,3 +47,12 @@ public class PaymentSummaryResponse
     public string Status { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
 }
+
+public class PaymentStatusResponse
+{
+    public string Status { get; set; }
+    public bool IsPaid { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime? PaymentDate { get; set; }
+    public string PaymentMethod { get; set; }
+}

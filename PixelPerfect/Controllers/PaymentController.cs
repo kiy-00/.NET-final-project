@@ -4,6 +4,7 @@ using PixelPerfect.Core.Models;
 using PixelPerfect.Services.Services;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace PixelPerfect.Controllers;
 
@@ -48,7 +49,7 @@ public class PaymentController : ControllerBase
 
     [HttpGet("user")]
     [Authorize]
-    public async Task<ActionResult<PaymentResponse>> GetUserPayments()
+    public async Task<ActionResult<List<PaymentResponse>>> GetUserPayments()
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
         var payments = await _paymentService.GetPaymentsByUserId(userId);
@@ -57,10 +58,41 @@ public class PaymentController : ControllerBase
 
     [HttpGet("order/{orderType}/{orderId}")]
     [Authorize]
-    public async Task<ActionResult<PaymentResponse>> GetOrderPayments(string orderType, int orderId)
+    public async Task<ActionResult<List<PaymentResponse>>> GetOrderPayments(string orderType, int orderId)
     {
         var payments = await _paymentService.GetPaymentsByOrder(orderType, orderId);
         return Ok(payments);
+    }
+
+    [HttpGet("status/{orderType}/{orderId}")]
+    [Authorize]
+    public async Task<ActionResult<PaymentStatusResponse>> GetOrderPaymentStatus(string orderType, int orderId)
+    {
+        try
+        {
+            var status = await _paymentService.GetOrderPaymentStatus(orderType, orderId);
+            return Ok(status);
+        }
+        catch (System.Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("user/status")]
+    [Authorize]
+    public async Task<ActionResult<List<PaymentResponse>>> GetUserPaymentsByStatus([FromQuery] string status, [FromQuery] string orderType = null)
+    {
+        try
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var payments = await _paymentService.GetPaymentsByUserIdAndStatus(userId, status, orderType);
+            return Ok(payments);
+        }
+        catch (System.Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPut("{id}/status")]
