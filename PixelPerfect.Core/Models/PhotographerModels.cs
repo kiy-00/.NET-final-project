@@ -73,4 +73,14 @@ namespace PixelPerfect.Core.Models
         public decimal? MaxPrice { get; set; }
         public bool VerifiedOnly { get; set; } = true;
     }
+
+    // 新的搜索参数类
+    public class PhotographerSearchParamsV2
+    {
+        public string? Keyword { get; set; }
+        public decimal? MinPrice { get; set; }
+        public decimal? MaxPrice { get; set; }
+        public bool VerifiedOnly { get; set; } = true;
+        public string? Location { get; set; }
+    }
 }

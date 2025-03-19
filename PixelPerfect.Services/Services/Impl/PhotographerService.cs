@@ -159,5 +159,53 @@ namespace PixelPerfect.Services.Impl
 				VerifiedAt = photographer.VerifiedAt
 			};
 		}
-	}
+
+        public async Task<List<PhotographerDto>> SearchPhotographersV2Async(PhotographerSearchParamsV2 searchParams)
+        {
+            var query = _context.Photographers
+                .Include(p => p.User)
+                .AsQueryable();
+
+            // 只显示已验证的摄影师
+            if (searchParams.VerifiedOnly)
+            {
+                query = query.Where(p => p.IsVerified);
+            }
+
+            // 通过关键词搜索多个字段
+            if (!string.IsNullOrWhiteSpace(searchParams.Keyword))
+            {
+                var keyword = searchParams.Keyword.ToLower();
+                query = query.Where(p =>
+                    p.User.Username.ToLower().Contains(keyword) ||
+                    (p.User.FirstName != null && p.User.FirstName.ToLower().Contains(keyword)) ||
+                    (p.User.LastName != null && p.User.LastName.ToLower().Contains(keyword)) ||
+                    (p.Bio != null && p.Bio.ToLower().Contains(keyword)) ||
+                    (p.Experience != null && p.Experience.ToLower().Contains(keyword)) ||
+                    (p.EquipmentInfo != null && p.EquipmentInfo.ToLower().Contains(keyword))
+                );
+            }
+
+            // 按位置筛选
+            if (!string.IsNullOrWhiteSpace(searchParams.Location))
+            {
+                var location = searchParams.Location.ToLower();
+                query = query.Where(p => p.Location != null && p.Location.ToLower().Contains(location));
+            }
+
+            // 价格筛选（如果提供）
+            if (searchParams.MinPrice.HasValue)
+            {
+                query = query.Where(p => p.PriceRangeMin >= searchParams.MinPrice.Value);
+            }
+
+            if (searchParams.MaxPrice.HasValue)
+            {
+                query = query.Where(p => p.PriceRangeMax <= searchParams.MaxPrice.Value);
+            }
+
+            var photographers = await query.ToListAsync();
+            return photographers.Select(MapToDto).ToList();
+        }
+    }
 }

@@ -19,5 +19,7 @@ namespace PixelPerfect.Services
 
         // 搜索摄影师
         Task<List<PhotographerDto>> SearchPhotographersAsync(PhotographerSearchParams searchParams);
+
+        Task<List<PhotographerDto>> SearchPhotographersV2Async(PhotographerSearchParamsV2 searchParams);
     }
 }

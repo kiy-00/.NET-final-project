@@ -124,5 +124,35 @@ namespace PixelPerfect.Controllers
                 return StatusCode(500, new { message = "An error occurred while searching photographers." });
             }
         }
+
+        [HttpGet("search/v2")]
+        public async Task<IActionResult> SearchPhotographersV2(
+            [FromQuery] string? keyword = null,
+            [FromQuery] string? location = null,
+            [FromQuery] decimal? minPrice = null,
+            [FromQuery] decimal? maxPrice = null,
+            [FromQuery] bool verifiedOnly = true)
+        {
+            try
+            {
+                // 创建新的搜索参数对象
+                var searchParams = new PhotographerSearchParamsV2
+                {
+                    Keyword = keyword,
+                    Location = location,
+                    MinPrice = minPrice,
+                    MaxPrice = maxPrice,
+                    VerifiedOnly = verifiedOnly
+                };
+
+                // 调用服务层方法执行搜索
+                var photographers = await _photographerService.SearchPhotographersV2Async(searchParams);
+                return Ok(photographers);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while searching photographers.", error = ex.Message });
+            }
+        }
     }
 }
