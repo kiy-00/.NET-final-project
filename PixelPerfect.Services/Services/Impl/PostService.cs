@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using PixelPerfect.Core.Entities;
 using PixelPerfect.Core.Models;
 using PixelPerfect.DataAccess.Repos;
@@ -320,6 +321,111 @@ namespace PixelPerfect.Services.Impl
             };
 
             return dto;
+        }
+
+        public async Task<List<PostDto>> GetLatestPostsAsync(int count, int? currentUserId)
+        {
+            // 获取最新的已审核通过的帖子
+            var posts = await _context.Posts
+                .Where(p => p.IsApproved)
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(count)
+                .Select(p => new PostDto
+                {
+                    PostId = p.PostId,
+                    UserId = p.UserId,
+                    Username = p.User.Username,
+                    Title = p.Title,
+                    Content = p.Content,
+                    ImagePath = p.ImagePath,
+                    CreatedAt = p.CreatedAt,
+                    IsApproved = p.IsApproved,
+                    ApprovedAt = p.ApprovedAt,
+                    LikesCount = p.Likes.Count,
+                    IsLikedByCurrentUser = currentUserId.HasValue ? p.Likes.Any(l => l.UserId == currentUserId.Value) : false
+                })
+                .ToListAsync();
+
+            return posts;
+        }
+
+        public async Task<PagedResult<PostDto>> SearchPostsV2Async(PostSearchParamsV2 searchParams, int? currentUserId = null)
+        {
+            // 计算分页
+            var skip = (searchParams.Page - 1) * searchParams.PageSize;
+
+            // 构建查询
+            var query = _context.Posts
+                .Where(p => p.IsApproved)  // 只搜索已批准的帖子
+                .AsQueryable();
+
+            // 应用搜索条件
+            if (!string.IsNullOrWhiteSpace(searchParams.Query))
+            {
+                searchParams.Query = searchParams.Query.Trim();
+                query = query.Where(p =>
+                    p.Title.Contains(searchParams.Query) ||
+                    p.Content.Contains(searchParams.Query) ||
+                    p.User.Username.Contains(searchParams.Query));
+            }
+
+            // 应用时间筛选
+            if (searchParams.StartDate.HasValue)
+            {
+                query = query.Where(p => p.CreatedAt >= searchParams.StartDate.Value);
+            }
+
+            if (searchParams.EndDate.HasValue)
+            {
+                query = query.Where(p => p.CreatedAt <= searchParams.EndDate.Value);
+            }
+
+            // 计算总数
+            var totalCount = await query.CountAsync();
+
+            // 应用排序
+            if (searchParams.SortBy.Equals("LikesCount", StringComparison.OrdinalIgnoreCase))
+            {
+                query = searchParams.Descending
+                    ? query.OrderByDescending(p => p.Likes.Count)
+                    : query.OrderBy(p => p.Likes.Count);
+            }
+            else // 默认按创建日期排序
+            {
+                query = searchParams.Descending
+                    ? query.OrderByDescending(p => p.CreatedAt)
+                    : query.OrderBy(p => p.CreatedAt);
+            }
+
+            // 应用分页
+            var posts = await query
+                .Skip(skip)
+                .Take(searchParams.PageSize)
+                .Select(p => new PostDto
+                {
+                    PostId = p.PostId,
+                    UserId = p.UserId,
+                    Username = p.User.Username,
+                    Title = p.Title,
+                    Content = p.Content,
+                    ImagePath = p.ImagePath,
+                    CreatedAt = p.CreatedAt,
+                    IsApproved = p.IsApproved,
+                    ApprovedAt = p.ApprovedAt,
+                    LikesCount = p.Likes.Count,
+                    IsLikedByCurrentUser = currentUserId.HasValue ? p.Likes.Any(l => l.UserId == currentUserId.Value) : false
+                })
+                .ToListAsync();
+
+            // 构建并返回分页结果
+            return new PagedResult<PostDto>
+            {
+                Items = posts,
+                TotalCount = totalCount,
+                Page = searchParams.Page,
+                PageSize = searchParams.PageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)searchParams.PageSize)
+            };
         }
     }
 }

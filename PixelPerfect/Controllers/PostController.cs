@@ -281,5 +281,47 @@ namespace PixelPerfect.Controllers
                 return StatusCode(500, new { message = "An error occurred while retrieving pending posts count." });
             }
         }
+
+        // 获取最新帖子
+        [HttpGet("latest")]
+        public async Task<IActionResult> GetLatestPosts([FromQuery] int count = 10)
+        {
+            try
+            {
+                int? userId = null;
+                if (User.Identity.IsAuthenticated)
+                {
+                    userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                }
+
+                var posts = await _postService.GetLatestPostsAsync(count, userId);
+                return Ok(posts);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving latest posts." });
+            }
+        }
+
+        // 更灵活的搜索帖子 V2
+        [HttpGet("search/v2")]
+        public async Task<IActionResult> SearchPostsV2([FromQuery] PostSearchParamsV2 searchParams)
+        {
+            try
+            {
+                int? userId = null;
+                if (User.Identity.IsAuthenticated)
+                {
+                    userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                }
+
+                var posts = await _postService.SearchPostsV2Async(searchParams, userId);
+                return Ok(posts);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while searching posts." });
+            }
+        }
     }
 }

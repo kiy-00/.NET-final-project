@@ -80,4 +80,16 @@ namespace PixelPerfect.Core.Models
         public int PageSize { get; set; }
         public int TotalPages { get; set; }
     }
+
+    // 更灵活的帖子搜索参数 V2
+    public class PostSearchParamsV2
+    {
+        public string Query { get; set; }  // 单一搜索词，将用于标题、内容和用户名的模糊匹配
+        public string SortBy { get; set; } = "CreatedAt";  // CreatedAt, LikesCount
+        public bool Descending { get; set; } = true;
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+    }
 }

@@ -31,5 +31,9 @@ namespace PixelPerfect.Services
         // 统计信息
         Task<int> GetPostsCountByUserIdAsync(int userId);
         Task<int> GetPendingPostsCountAsync();
+
+        Task<List<PostDto>> GetLatestPostsAsync(int count, int? currentUserId);
+
+        Task<PagedResult<PostDto>> SearchPostsV2Async(PostSearchParamsV2 searchParams, int? currentUserId = null);
     }
 }
