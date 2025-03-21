@@ -16,6 +16,9 @@ using PixelPerfect.Services;
 using PixelPerfect.Services.Impl;
 using System.IO; // 用于文件和目录操作
 using SixLabors.ImageSharp.Web;
+using PixelPerfect.DataAccess.Repo;
+using PixelPerfect.Services.Services.Impl;
+using PixelPerfect.Services.Services;
 
 namespace PixelPerfect
 {
@@ -127,6 +130,10 @@ namespace PixelPerfect
                         services.AddScoped<LikeRepo>();
                         services.AddScoped<IPostService, PostService>();
                         services.AddScoped<ILikeService, LikeService>();
+
+                        // 注册支付相关服务
+                        services.AddScoped<IPaymentRepo, PaymentRepo>();
+                        services.AddScoped<IPaymentService, PaymentService>();
 
                         // 在 Program.cs 中添加下列服务注册
 
