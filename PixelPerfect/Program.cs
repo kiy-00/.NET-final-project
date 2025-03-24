@@ -149,6 +149,9 @@ namespace PixelPerfect
                         // 注册关注功能相关服务
                         services.AddScoped<IFollowService, FollowService>();
 
+                        // 注册高级图像处理服务
+                        services.AddScoped<IAdvancedImageService, AdvancedImageService>();
+
                         // Swagger配置
                         services.AddSwaggerGen(c =>
                         {

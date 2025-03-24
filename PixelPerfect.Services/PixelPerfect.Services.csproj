@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PixelPerfect.Core\PixelPerfect.Core.csproj" />
     <ProjectReference Include="..\PixelPerfect.DataAccess\PixelPerfect.DataAccess.csproj" />
+    <ProjectReference Include="..\PixelPerfect.ImageProcessing.CLI\PixelPerfect.ImageProcessing.CLI.vcxproj" />
   </ItemGroup>
 
 </Project>
