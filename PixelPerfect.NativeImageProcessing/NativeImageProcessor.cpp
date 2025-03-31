@@ -1,3 +1,4 @@
+#include "pch.h"  // 这行必须添加在文件最顶部
 #define PIXELPERFECT_NATIVEIMAGEPROCESSING_EXPORTS
 #include "NativeImageProcessor.h"
 #include <vector>
@@ -5,6 +6,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+
 
 // 其余代码保持不变...
 
@@ -84,7 +86,7 @@ extern "C" {
             }
 
             // 限制在合理范围内
-            return std::min(faceCount, 10);
+            return (std::min)(faceCount, 10);
         }
         catch (const std::exception& e) {
             SetError(e.what());
@@ -104,15 +106,15 @@ extern "C" {
             // 实际应用中应使用更高级的图像处理技术如直方图比较或特征匹配
 
             // 首先比较图像大小
-            if (std::abs((int)(length1 - length2)) > (int)(0.5 * std::max(length1, length2))) {
+            if (std::abs((int)(length1 - length2)) > (int)(0.5 * (std::max)(length1, length2))) {
                 // 如果大小差异过大，认为图像差异较大
                 return 30; // 30%相似度
             }
 
             // 比较数据样本
             const size_t sampleSize = 1000;
-            const size_t maxSamples = std::min(length1, length2) / 10;
-            const size_t samples = std::min(sampleSize, maxSamples);
+            const size_t maxSamples = (std::min)(length1, length2) / 10;
+            const size_t samples = (std::min)(sampleSize, maxSamples);
 
             if (samples == 0) {
                 return 50; // 默认中等相似度
@@ -120,7 +122,7 @@ extern "C" {
 
             int matchCount = 0;
             for (size_t i = 0; i < samples; i++) {
-                size_t pos = (i * std::min(length1, length2)) / samples;
+                size_t pos = (i * (std::min)(length1, length2)) / samples;
                 if (pos < length1 && pos < length2 && imageData1[pos] == imageData2[pos]) {
                     matchCount++;
                 }
@@ -163,10 +165,10 @@ extern "C" {
 
                     // 简单锐化：增强与中间值(128)的差异
                     if (value > 128) {
-                        value = std::min(255, value + 15);
+                        value = (std::min)(255, value + 15);
                     }
                     else if (value < 128) {
-                        value = std::max(0, value - 15);
+                        value = (std::max)(0, value - 15);
                     }
 
                     output[i + j] = static_cast<unsigned char>(value);
