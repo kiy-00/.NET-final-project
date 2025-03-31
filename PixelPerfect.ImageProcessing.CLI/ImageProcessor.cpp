@@ -64,6 +64,135 @@ namespace PixelPerfect {
                             }
                         }
                     }
+                    // 添加新滤镜类型 - 高对比度
+                    else if (String::Equals(filterType, "highcontrast", StringComparison::OrdinalIgnoreCase))
+                    {
+                        for (int y = 0; y < bitmap->Height; y++)
+                        {
+                            for (int x = 0; x < bitmap->Width; x++)
+                            {
+                                Color pixel = bitmap->GetPixel(x, y);
+                                int r = pixel.R;
+                                int g = pixel.G;
+                                int b = pixel.B;
+
+                                // 增加对比度的简单算法
+                                r = (int)((r - 128) * 1.5 + 128);
+                                g = (int)((g - 128) * 1.5 + 128);
+                                b = (int)((b - 128) * 1.5 + 128);
+
+                                r = Math::Max(0, Math::Min(255, r));
+                                g = Math::Max(0, Math::Min(255, g));
+                                b = Math::Max(0, Math::Min(255, b));
+
+                                bitmap->SetPixel(x, y, Color::FromArgb(pixel.A, r, g, b));
+                            }
+                        }
+                    }
+                    // 添加新滤镜类型 - 模糊
+                    else if (String::Equals(filterType, "blur", StringComparison::OrdinalIgnoreCase))
+                    {
+                        Bitmap^ result = gcnew Bitmap(bitmap->Width, bitmap->Height);
+
+                        // 简单的3x3均值模糊
+                        for (int y = 1; y < bitmap->Height - 1; y++)
+                        {
+                            for (int x = 1; x < bitmap->Width - 1; x++)
+                            {
+                                int sumR = 0, sumG = 0, sumB = 0;
+
+                                // 3x3邻域像素求和
+                                for (int ky = -1; ky <= 1; ky++)
+                                {
+                                    for (int kx = -1; kx <= 1; kx++)
+                                    {
+                                        Color pixel = bitmap->GetPixel(x + kx, y + ky);
+                                        sumR += pixel.R;
+                                        sumG += pixel.G;
+                                        sumB += pixel.B;
+                                    }
+                                }
+
+                                // 取平均值
+                                int avgR = sumR / 9;
+                                int avgG = sumG / 9;
+                                int avgB = sumB / 9;
+
+                                result->SetPixel(x, y, Color::FromArgb(bitmap->GetPixel(x, y).A, avgR, avgG, avgB));
+                            }
+                        }
+
+                        delete bitmap;
+                        bitmap = result;
+                    }
+                    // 添加新滤镜类型 - 红色增强
+                    else if (String::Equals(filterType, "redboost", StringComparison::OrdinalIgnoreCase))
+                    {
+                        for (int y = 0; y < bitmap->Height; y++)
+                        {
+                            for (int x = 0; x < bitmap->Width; x++)
+                            {
+                                Color pixel = bitmap->GetPixel(x, y);
+                                int r = Math::Min(255, (int)(pixel.R * 1.5));
+                                bitmap->SetPixel(x, y, Color::FromArgb(pixel.A, r, pixel.G, pixel.B));
+                            }
+                        }
+                    }
+                    // 添加新滤镜类型 - 绿色增强
+                    else if (String::Equals(filterType, "greenboost", StringComparison::OrdinalIgnoreCase))
+                    {
+                        for (int y = 0; y < bitmap->Height; y++)
+                        {
+                            for (int x = 0; x < bitmap->Width; x++)
+                            {
+                                Color pixel = bitmap->GetPixel(x, y);
+                                int g = Math::Min(255, (int)(pixel.G * 1.5));
+                                bitmap->SetPixel(x, y, Color::FromArgb(pixel.A, pixel.R, g, pixel.B));
+                            }
+                        }
+                    }
+                    // 添加新滤镜类型 - 蓝色增强
+                    else if (String::Equals(filterType, "blueboost", StringComparison::OrdinalIgnoreCase))
+                    {
+                        for (int y = 0; y < bitmap->Height; y++)
+                        {
+                            for (int x = 0; x < bitmap->Width; x++)
+                            {
+                                Color pixel = bitmap->GetPixel(x, y);
+                                int b = Math::Min(255, (int)(pixel.B * 1.5));
+                                bitmap->SetPixel(x, y, Color::FromArgb(pixel.A, pixel.R, pixel.G, b));
+                            }
+                        }
+                    }
+                    // 添加新滤镜类型 - 冷色调
+                    else if (String::Equals(filterType, "cold", StringComparison::OrdinalIgnoreCase))
+                    {
+                        for (int y = 0; y < bitmap->Height; y++)
+                        {
+                            for (int x = 0; x < bitmap->Width; x++)
+                            {
+                                Color pixel = bitmap->GetPixel(x, y);
+                                int r = Math::Max(0, pixel.R - 30);
+                                int b = Math::Min(255, pixel.B + 30);
+                                bitmap->SetPixel(x, y, Color::FromArgb(pixel.A, r, pixel.G, b));
+                            }
+                        }
+                    }
+                    // 添加新滤镜类型 - 暖色调
+                    else if (String::Equals(filterType, "warm", StringComparison::OrdinalIgnoreCase))
+                    {
+                        for (int y = 0; y < bitmap->Height; y++)
+                        {
+                            for (int x = 0; x < bitmap->Width; x++)
+                            {
+                                Color pixel = bitmap->GetPixel(x, y);
+                                int r = Math::Min(255, pixel.R + 30);
+                                int g = Math::Min(255, pixel.G + 15);
+                                int b = Math::Max(0, pixel.B - 30);
+                                bitmap->SetPixel(x, y, Color::FromArgb(pixel.A, r, g, b));
+                            }
+                        }
+                    }
 
                     return BitmapToBytes(bitmap, ImageFormat::Jpeg);
                 }

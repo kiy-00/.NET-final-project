@@ -28,6 +28,23 @@ namespace PixelPerfect.Controllers
             _fileStorage = fileStorage;
         }
 
+        /// <summary>
+        /// 应用滤镜到图像
+        /// </summary>
+        /// <param name="file">要处理的图像文件</param>
+        /// <param name="filterType">
+        /// 滤镜类型:
+        /// - grayscale: 灰度滤镜
+        /// - sepia: 棕褐色滤镜
+        /// - negative: 反色滤镜
+        /// - highcontrast: 高对比度
+        /// - blur: 模糊效果
+        /// - redboost: 红色增强
+        /// - greenboost: 绿色增强
+        /// - blueboost: 蓝色增强
+        /// - cold: 冷色调
+        /// - warm: 暖色调
+
         // 应用滤镜
         [HttpPost("filter")]
         [Authorize]
