@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -19,6 +21,10 @@ using SixLabors.ImageSharp.Web;
 using PixelPerfect.DataAccess.Repo;
 using PixelPerfect.Services.Services.Impl;
 using PixelPerfect.Services.Services;
+using System.Runtime.InteropServices;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using Microsoft.AspNetCore.Http;
+using System.Reflection;
 
 namespace PixelPerfect
 {
@@ -156,6 +162,9 @@ namespace PixelPerfect
                         services.AddSwaggerGen(c =>
                         {
                             c.SwaggerDoc("v1", new OpenApiInfo { Title = "PixelPerfect API", Version = "v1" });
+
+                            // 添加文件上传操作过滤器
+                            c.OperationFilter<FileUploadOperationFilter>();
 
                             // 添加JWT认证配置
                             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -302,5 +311,84 @@ namespace PixelPerfect
                         });
                     });
                 });
+    }
+
+    // 简化版的文件上传操作过滤器
+    public class FileUploadOperationFilter : IOperationFilter
+    {
+        public void Apply(OpenApiOperation operation, OperationFilterContext context)
+        {
+            // 检查是否有IFormFile类型的参数
+            var hasFormFileParam = context.MethodInfo.GetParameters()
+                .Any(p => p.ParameterType == typeof(IFormFile));
+
+            if (hasFormFileParam)
+            {
+                // 获取所有方法参数
+                var formFileParams = context.MethodInfo.GetParameters()
+                    .Where(param => param.GetCustomAttributes<Microsoft.AspNetCore.Mvc.FromFormAttribute>().Any()
+                        || param.ParameterType == typeof(IFormFile))
+                    .ToList();
+
+                if (formFileParams.Any())
+                {
+                    // 创建一个新的请求体
+                    operation.RequestBody = new OpenApiRequestBody
+                    {
+                        Content = new Dictionary<string, OpenApiMediaType>
+                        {
+                            ["multipart/form-data"] = new OpenApiMediaType
+                            {
+                                Schema = new OpenApiSchema
+                                {
+                                    Type = "object",
+                                    Properties = new Dictionary<string, OpenApiSchema>()
+                                }
+                            }
+                        }
+                    };
+
+                    foreach (var param in formFileParams)
+                    {
+                        OpenApiSchema schema;
+
+                        if (param.ParameterType == typeof(IFormFile))
+                        {
+                            schema = new OpenApiSchema
+                            {
+                                Type = "string",
+                                Format = "binary"
+                            };
+                        }
+                        else
+                        {
+                            schema = new OpenApiSchema
+                            {
+                                Type = GetOpenApiTypeForSystemType(param.ParameterType)
+                            };
+                        }
+
+                        operation.RequestBody.Content["multipart/form-data"].Schema.Properties.Add(param.Name, schema);
+                    }
+
+                    // 从操作参数中移除已添加到请求体的参数
+                    var formFileParamNames = formFileParams.Select(p => p.Name.ToLower()).ToList();
+                    operation.Parameters = operation.Parameters
+                        .Where(p => !formFileParamNames.Contains(p.Name.ToLower()))
+                        .ToList();
+                }
+            }
+        }
+
+        private string GetOpenApiTypeForSystemType(Type type)
+        {
+            if (type == typeof(int) || type == typeof(long) || type == typeof(short))
+                return "integer";
+            if (type == typeof(double) || type == typeof(float) || type == typeof(decimal))
+                return "number";
+            if (type == typeof(bool))
+                return "boolean";
+            return "string";
+        }
     }
 }

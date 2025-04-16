@@ -486,5 +486,25 @@ namespace PixelPerfect.Controllers
                 return StatusCode(500, new { message = "An error occurred while deleting portfolio item." });
             }
         }
+
+        // 获取指定摄影师的公开作品集数量
+        [HttpGet("photographer/{photographerId}/public-count")]
+        public async Task<IActionResult> GetPhotographerPublicPortfoliosCount(int photographerId)
+        {
+            try
+            {
+                var count = await _portfolioService.GetPhotographerPublicPortfoliosCountAsync(photographerId);
+                return Ok(new
+                {
+                    photographerId = photographerId,
+                    publicPortfolioCount = count
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "获取摄影师公开作品集数量时发生错误。" });
+            }
+        }
+
     }
 }

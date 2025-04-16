@@ -1220,5 +1220,21 @@ namespace PixelPerfect.Services.Impl
             return dto;
         }
         #endregion
+
+        // 获取摄影师公开作品集数量
+        public async Task<int> GetPhotographerPublicPortfoliosCountAsync(int photographerId)
+        {
+            return await _context.Photographerportfolios
+                .Where(p => p.PhotographerId == photographerId && p.IsPublic == true)
+                .CountAsync();
+        }
+
+        // 获取修图师公开作品集数量
+        public async Task<int> GetRetoucherPublicPortfoliosCountAsync(int retoucherId)
+        {
+            return await _context.Retoucherportfolios
+                .Where(p => p.RetoucherId == retoucherId && p.IsPublic == true)
+                .CountAsync();
+        }
     }
 }

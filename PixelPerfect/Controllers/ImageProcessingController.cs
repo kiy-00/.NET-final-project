@@ -44,8 +44,7 @@ namespace PixelPerfect.Controllers
         /// - blueboost: 蓝色增强
         /// - cold: 冷色调
         /// - warm: 暖色调
-
-        // 应用滤镜
+        /// </summary>
         [HttpPost("filter")]
         [Authorize]
         public async Task<IActionResult> ApplyFilter(IFormFile file, [FromForm] string filterType)
@@ -343,9 +342,6 @@ namespace PixelPerfect.Controllers
                 if (file == null)
                     return BadRequest(new { message = "没有上传文件" });
 
-                if (quality < 0 || quality > 100)
-                    return BadRequest(new { message = "质量参数必须在0-100范围内" });
-
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
                 var parameters = new Dictionary<string, string>
@@ -353,16 +349,37 @@ namespace PixelPerfect.Controllers
                     ["quality"] = quality.ToString()
                 };
 
-                byte[] processedImage = await _advancedImageService.ProcessImageAsync(file, "compress", parameters);
+                byte[] processedImage;
+                try
+                {
+                    processedImage = await _advancedImageService.ProcessImageAsync(file, "compress", parameters);
+                }
+                catch
+                {
+                    // 备选方案
+                    using (var imageStream = new MemoryStream())
+                    {
+                        await file.CopyToAsync(imageStream);
+                        var imageData = imageStream.ToArray();
 
-                // 计算压缩比例
-                double compressionRatio = 100.0 - ((double)processedImage.Length / file.Length * 100.0);
+                        using (var outputStream = new MemoryStream())
+                        {
+                            var image = SixLabors.ImageSharp.Image.Load(imageData);
+                            var encoder = new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder
+                            {
+                                Quality = quality
+                            };
+                            image.Save(outputStream, encoder);
+                            processedImage = outputStream.ToArray();
+                        }
+                    }
+                }
 
                 // 保存处理后的图片
                 using (var ms = new MemoryStream(processedImage))
                 {
                     // 创建新的FormFile
-                    var fileName = Path.GetFileNameWithoutExtension(file.FileName) + $"_compressed" + Path.GetExtension(file.FileName);
+                    var fileName = Path.GetFileNameWithoutExtension(file.FileName) + $"_compressed_{quality}" + Path.GetExtension(file.FileName);
                     var processedFile = new FormFile(ms, 0, processedImage.Length, file.Name, fileName)
                     {
                         Headers = file.Headers,
@@ -373,19 +390,18 @@ namespace PixelPerfect.Controllers
                     var uploadResult = await _photoService.UploadGeneralPhotoAsync(
                         userId,
                         processedFile,
-                        $"压缩后的图片(质量:{quality}%)",
-                        $"原始图片：{file.FileName}，压缩率：{Math.Round(compressionRatio, 2)}%，处理时间：{DateTime.Now}"
+                        $"压缩质量为{quality}的图片",
+                        $"原始图片：{file.FileName}，压缩质量：{quality}，处理时间：{DateTime.Now}"
                     );
 
                     return Ok(new
                     {
-                        message = $"成功压缩图像，质量：{quality}%，压缩率：{Math.Round(compressionRatio, 2)}%",
-                        originalSize = file.Length,
-                        compressedSize = processedImage.Length,
-                        compressionRatio = Math.Round(compressionRatio, 2),
+                        message = $"成功压缩图像，质量：{quality}",
                         photoId = uploadResult.PhotoId,
                         url = uploadResult.Url,
-                        thumbnailUrl = uploadResult.ThumbnailUrl
+                        thumbnailUrl = uploadResult.ThumbnailUrl,
+                        originalSize = file.Length,
+                        compressedSize = processedImage.Length
                     });
                 }
             }

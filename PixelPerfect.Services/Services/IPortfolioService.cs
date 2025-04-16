@@ -60,5 +60,14 @@ namespace PixelPerfect.Services
 
         // 新增 - 获取修图前后对比图片
         Task<(PortfolioItemDto Before, PortfolioItemDto After)> GetBeforeAfterImagesAsync(int itemId);
+
+        // Services/IPortfolioService.cs
+        // 修改后的两个获取作品集数量的方法
+
+        // 获取摄影师公开作品集数量
+        Task<int> GetPhotographerPublicPortfoliosCountAsync(int photographerId);
+
+        // 获取修图师公开作品集数量
+        Task<int> GetRetoucherPublicPortfoliosCountAsync(int retoucherId);
     }
 }

@@ -588,5 +588,24 @@ namespace PixelPerfect.Controllers
                 return StatusCode(500, new { message = "An error occurred while deleting portfolio item." });
             }
         }
+
+        // 获取指定修图师的公开作品集数量
+        [HttpGet("retoucher/{retoucherId}/public-count")]
+        public async Task<IActionResult> GetRetoucherPublicPortfoliosCount(int retoucherId)
+        {
+            try
+            {
+                var count = await _portfolioService.GetRetoucherPublicPortfoliosCountAsync(retoucherId);
+                return Ok(new
+                {
+                    retoucherId = retoucherId,
+                    publicPortfolioCount = count
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "获取修图师公开作品集数量时发生错误。" });
+            }
+        }
     }
 }
