@@ -63,7 +63,7 @@ namespace PixelPerfect.Services.Impl
                 Content = request.Content,
                 Type = request.Type,
                 IsRead = false,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 ReadAt = null
             };
 
@@ -84,7 +84,7 @@ namespace PixelPerfect.Services.Impl
                 Content = content,
                 Type = type,
                 IsRead = false,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 ReadAt = null
             }).ToList();
 
@@ -99,7 +99,7 @@ namespace PixelPerfect.Services.Impl
                 throw new KeyNotFoundException($"Notification with ID {notificationId} not found.");
 
             notification.IsRead = true;
-            notification.ReadAt = DateTime.UtcNow;
+            notification.ReadAt = DateTime.Now;
 
             return await _notificationRepo.UpdateAsync(notification);
         }
@@ -113,7 +113,7 @@ namespace PixelPerfect.Services.Impl
             foreach (var notification in notifications)
             {
                 notification.IsRead = true;
-                notification.ReadAt = DateTime.UtcNow;
+                notification.ReadAt = DateTime.Now;
             }
 
             _context.Notifications.UpdateRange(notifications);

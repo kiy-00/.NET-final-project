@@ -88,7 +88,7 @@ namespace PixelPerfect.Services.Impl
                 PostId = request.PostId,
                 Reason = request.Reason,
                 Status = "Pending", // 默认待处理
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 HandledAt = null,
                 HandledByUserId = null
             };
@@ -110,7 +110,7 @@ namespace PixelPerfect.Services.Impl
 
             // 更新举报状态
             report.Status = status;
-            report.HandledAt = DateTime.UtcNow;
+            report.HandledAt = DateTime.Now;
             report.HandledByUserId = adminUserId;
 
             // 如果举报被批准，更新帖子状态

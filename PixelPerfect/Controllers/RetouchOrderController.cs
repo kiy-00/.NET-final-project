@@ -251,7 +251,7 @@ namespace PixelPerfect.Controllers
                     userId,
                     request.RetouchedPhoto,
                     $"Retouched Photo - Order #{orderId}",
-                    request.Comment ?? $"Retouched photo uploaded on {DateTime.UtcNow:yyyy-MM-dd}"
+                    request.Comment ?? $"Retouched photo uploaded on {DateTime.Now:yyyy-MM-dd}"
                 );
 
                 // 获取照片URL

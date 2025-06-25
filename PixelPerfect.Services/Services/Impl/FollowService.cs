@@ -132,7 +132,7 @@ namespace PixelPerfect.Services.Impl
                 Content = $"有新用户关注了你",
                 Type = "Follow",
                 IsRead = false,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             await _notificationRepo.CreateAsync(notification);

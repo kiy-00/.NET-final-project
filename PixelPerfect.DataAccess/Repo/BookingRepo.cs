@@ -82,7 +82,7 @@ namespace PixelPerfect.DataAccess.Repos
 
         public async Task<bool> UpdateAsync(Booking booking)
         {
-            booking.UpdatedAt = DateTime.UtcNow;
+            booking.UpdatedAt = DateTime.Now;
             _context.Bookings.Update(booking);
             var affected = await _context.SaveChangesAsync();
             return affected > 0;

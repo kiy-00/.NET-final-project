@@ -120,7 +120,7 @@ namespace PixelPerfect.Services.Impl
                 RoleType = request.RoleType,
                 Status = "Pending",
                 ApplicationData = JsonSerializer.Serialize(request.ApplicationData),
-                SubmittedAt = DateTime.UtcNow
+                SubmittedAt = DateTime.Now
             };
 
             var createdApplication = await _roleApplicationRepo.CreateAsync(application);
@@ -153,7 +153,7 @@ namespace PixelPerfect.Services.Impl
 
             // 更新申请
             application.Status = request.Status;
-            application.ProcessedAt = DateTime.UtcNow;
+            application.ProcessedAt = DateTime.Now;
             application.ProcessedByUserId = adminId;
             application.Feedback = request.Feedback;
 

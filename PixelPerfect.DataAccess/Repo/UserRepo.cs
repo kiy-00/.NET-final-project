@@ -91,7 +91,7 @@ public class UserRepo
 		{
 			UserId = userId,
 			RoleType = roleType,
-			CreatedAt = DateTime.UtcNow
+			CreatedAt = DateTime.Now
 		};
 
 		await _context.Userroles.AddAsync(userRole);
@@ -220,7 +220,7 @@ public class UserRepo
 		{
 			FollowerId = followerId,
 			FollowedId = followedId,
-			CreatedAt = DateTime.UtcNow,
+			CreatedAt = DateTime.Now,
 			Status = "Active"
 		};
 

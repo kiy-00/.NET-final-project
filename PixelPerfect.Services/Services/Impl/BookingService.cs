@@ -78,8 +78,8 @@ namespace PixelPerfect.Services.Impl
                 InitialAmount = initialAmount,
                 Requirements = request.Requirements,
                 PhotoCount = request.PhotoCount,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
                 IsPublic = false // 默认不公开
             };
 

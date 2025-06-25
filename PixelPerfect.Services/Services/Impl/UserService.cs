@@ -80,7 +80,7 @@ namespace PixelPerfect.Services.Impl
 
             user.PasswordHash = passwordHash;
             user.Salt = salt;
-            user.CreatedAt = DateTime.UtcNow;
+            user.CreatedAt = DateTime.Now;
 
             // 确保 Biography 字段不为 null (如果没有提供)
             if (user.Biography == null)
@@ -151,7 +151,7 @@ namespace PixelPerfect.Services.Impl
             {
                 UserId = userId,
                 RoleType = roleType,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             await _context.Userroles.AddAsync(userRole);
@@ -190,7 +190,7 @@ namespace PixelPerfect.Services.Impl
                 return (null, string.Empty);
 
             // 更新最后登录时间
-            user.LastLogin = DateTime.UtcNow;
+            user.LastLogin = DateTime.Now;
             await _userRepo.UpdateAsync(user);
 
             // 生成JWT令牌
@@ -282,7 +282,7 @@ namespace PixelPerfect.Services.Impl
                 throw new KeyNotFoundException($"Photographer with ID {photographerId} not found.");
 
             photographer.IsVerified = true;
-            photographer.VerifiedAt = DateTime.UtcNow;
+            photographer.VerifiedAt = DateTime.Now;
 
             return await _userRepo.UpdatePhotographerAsync(photographer);
         }
@@ -338,7 +338,7 @@ namespace PixelPerfect.Services.Impl
                 throw new KeyNotFoundException($"Retoucher with ID {retoucherId} not found.");
 
             retoucher.IsVerified = true;
-            retoucher.VerifiedAt = DateTime.UtcNow;
+            retoucher.VerifiedAt = DateTime.Now;
 
             return await _userRepo.UpdateRetoucherAsync(retoucher);
         }
@@ -435,7 +435,7 @@ namespace PixelPerfect.Services.Impl
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
                     Subject = new ClaimsIdentity(claims),
-                    Expires = DateTime.UtcNow.AddDays(7),
+                    Expires = DateTime.Now.AddDays(7),
                     SigningCredentials = new SigningCredentials(
                         new SymmetricSecurityKey(key),
                         SecurityAlgorithms.HmacSha256Signature)

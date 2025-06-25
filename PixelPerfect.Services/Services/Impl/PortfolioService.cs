@@ -144,8 +144,8 @@ namespace PixelPerfect.Services.Impl
                 Description = request.Description,
                 Category = request.Category,
                 IsPublic = request.IsPublic,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
             };
 
             var createdPortfolio = await _portfolioRepo.CreatePhotographerPortfolioAsync(portfolio);
@@ -171,7 +171,7 @@ namespace PixelPerfect.Services.Impl
             if (request.IsPublic.HasValue)
                 portfolio.IsPublic = request.IsPublic.Value;
 
-            portfolio.UpdatedAt = DateTime.UtcNow;
+            portfolio.UpdatedAt = DateTime.Now;
 
             return await _portfolioRepo.UpdatePhotographerPortfolioAsync(portfolio);
         }
@@ -335,8 +335,8 @@ namespace PixelPerfect.Services.Impl
                 Description = request.Description,
                 Category = request.Category,
                 IsPublic = request.IsPublic,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
             };
 
             var createdPortfolio = await _portfolioRepo.CreateRetoucherPortfolioAsync(portfolio);
@@ -362,7 +362,7 @@ namespace PixelPerfect.Services.Impl
             if (request.IsPublic.HasValue)
                 portfolio.IsPublic = request.IsPublic.Value;
 
-            portfolio.UpdatedAt = DateTime.UtcNow;
+            portfolio.UpdatedAt = DateTime.Now;
 
             return await _portfolioRepo.UpdateRetoucherPortfolioAsync(portfolio);
         }
@@ -453,7 +453,7 @@ namespace PixelPerfect.Services.Impl
                 ContentType = file.ContentType,
                 Size = file.Length,
                 ThumbnailPath = thumbnailPath,
-                UploadedAt = DateTime.UtcNow,
+                UploadedAt = DateTime.Now,
                 IsPortfolioCover = request.IsPortfolioCover
             };
 
@@ -466,7 +466,7 @@ namespace PixelPerfect.Services.Impl
                 Title = request.Title,
                 Description = request.Description,
                 Metadata = JsonSerializer.Serialize(metadata),
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsBeforeImage = request.IsBeforeImage,
                 AfterImageId = request.AfterImageId
             };
@@ -474,7 +474,7 @@ namespace PixelPerfect.Services.Impl
             var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, false);
 
             // 更新作品集的最后修改时间
-            portfolio.UpdatedAt = DateTime.UtcNow;
+            portfolio.UpdatedAt = DateTime.Now;
             await _portfolioRepo.UpdatePhotographerPortfolioAsync(portfolio);
 
             return MapToPortfolioItemDto(createdItem);
@@ -505,7 +505,7 @@ namespace PixelPerfect.Services.Impl
                 ContentType = file.ContentType,
                 Size = file.Length,
                 ThumbnailPath = thumbnailPath,
-                UploadedAt = DateTime.UtcNow,
+                UploadedAt = DateTime.Now,
                 IsPortfolioCover = request.IsPortfolioCover
             };
 
@@ -518,7 +518,7 @@ namespace PixelPerfect.Services.Impl
                 Title = request.Title,
                 Description = request.Description,
                 Metadata = JsonSerializer.Serialize(metadata),
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsBeforeImage = request.IsBeforeImage,
                 AfterImageId = request.AfterImageId
             };
@@ -526,7 +526,7 @@ namespace PixelPerfect.Services.Impl
             var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, true);
 
             // 更新作品集的最后修改时间
-            portfolio.UpdatedAt = DateTime.UtcNow;
+            portfolio.UpdatedAt = DateTime.Now;
             await _portfolioRepo.UpdateRetoucherPortfolioAsync(portfolio);
 
             return MapToPortfolioItemDto(createdItem);
@@ -632,7 +632,7 @@ namespace PixelPerfect.Services.Impl
                 ContentType = file.ContentType,
                 Size = file.Length,
                 ThumbnailPath = thumbnailPath,
-                UploadedAt = DateTime.UtcNow,
+                UploadedAt = DateTime.Now,
                 IsPortfolioCover = true
             };
 
@@ -645,7 +645,7 @@ namespace PixelPerfect.Services.Impl
                 Title = "Cover Image",
                 Description = "Portfolio Cover Image",
                 Metadata = JsonSerializer.Serialize(metadata),
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsBeforeImage = false,
                 AfterImageId = null
             };
@@ -653,7 +653,7 @@ namespace PixelPerfect.Services.Impl
             var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, false);
 
             // 更新作品集的最后修改时间
-            portfolio.UpdatedAt = DateTime.UtcNow;
+            portfolio.UpdatedAt = DateTime.Now;
             await _portfolioRepo.UpdatePhotographerPortfolioAsync(portfolio);
 
             return MapToPortfolioItemDto(createdItem);
@@ -691,7 +691,7 @@ namespace PixelPerfect.Services.Impl
                 ContentType = file.ContentType,
                 Size = file.Length,
                 ThumbnailPath = thumbnailPath,
-                UploadedAt = DateTime.UtcNow,
+                UploadedAt = DateTime.Now,
                 IsPortfolioCover = true
             };
 
@@ -704,7 +704,7 @@ namespace PixelPerfect.Services.Impl
                 Title = "Cover Image",
                 Description = "Portfolio Cover Image",
                 Metadata = JsonSerializer.Serialize(metadata),
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsBeforeImage = false,
                 AfterImageId = null
             };
@@ -712,7 +712,7 @@ namespace PixelPerfect.Services.Impl
             var createdItem = await _portfolioRepo.CreatePortfolioItemAsync(item, true);
 
             // 更新作品集的最后修改时间
-            portfolio.UpdatedAt = DateTime.UtcNow;
+            portfolio.UpdatedAt = DateTime.Now;
             await _portfolioRepo.UpdateRetoucherPortfolioAsync(portfolio);
 
             return MapToPortfolioItemDto(createdItem);
@@ -790,7 +790,7 @@ namespace PixelPerfect.Services.Impl
                     ContentType = beforeImage.ContentType,
                     Size = beforeImage.Length,
                     ThumbnailPath = beforeThumbnailPath,
-                    UploadedAt = DateTime.UtcNow,
+                    UploadedAt = DateTime.Now,
                     IsBeforeAfterPair = true,
                     IsBefore = true
                 };
@@ -804,7 +804,7 @@ namespace PixelPerfect.Services.Impl
                     Title = $"{request.Title} (Before)",
                     Description = request.Description,
                     Metadata = JsonSerializer.Serialize(beforeMetadata),
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.Now,
                     IsBeforeImage = true
                 };
 
@@ -822,7 +822,7 @@ namespace PixelPerfect.Services.Impl
                 ContentType = afterImage.ContentType,
                 Size = afterImage.Length,
                 ThumbnailPath = afterThumbnailPath,
-                UploadedAt = DateTime.UtcNow,
+                UploadedAt = DateTime.Now,
                 IsBeforeAfterPair = beforeImage != null,
                 IsAfter = true,
                 BeforeItemId = beforeItem?.ItemId
@@ -837,7 +837,7 @@ namespace PixelPerfect.Services.Impl
                 Title = request.Title ?? "Retouched Image",
                 Description = request.Description,
                 Metadata = JsonSerializer.Serialize(afterMetadata),
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsBeforeImage = false
             };
 
@@ -851,7 +851,7 @@ namespace PixelPerfect.Services.Impl
             }
 
             // 更新作品集的最后修改时间
-            portfolio.UpdatedAt = DateTime.UtcNow;
+            portfolio.UpdatedAt = DateTime.Now;
             await _portfolioRepo.UpdateRetoucherPortfolioAsync(portfolio);
 
             // 返回的是修图后的图片
@@ -964,7 +964,7 @@ namespace PixelPerfect.Services.Impl
                         ContentType = file.ContentType,
                         Size = file.Length,
                         ThumbnailPath = thumbnailPath,
-                        UploadedAt = DateTime.UtcNow,
+                        UploadedAt = DateTime.Now,
                         BatchUpload = true
                     };
 
@@ -977,7 +977,7 @@ namespace PixelPerfect.Services.Impl
                         Title = title,
                         Description = request.Description,
                         Metadata = JsonSerializer.Serialize(metadata),
-                        CreatedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.Now,
                         IsBeforeImage = false,
                         AfterImageId = null
                     };
@@ -993,7 +993,7 @@ namespace PixelPerfect.Services.Impl
             }
 
             // 更新作品集的最后修改时间
-            portfolio.UpdatedAt = DateTime.UtcNow;
+            portfolio.UpdatedAt = DateTime.Now;
             await _portfolioRepo.UpdatePhotographerPortfolioAsync(portfolio);
 
             return uploadedItems;
@@ -1035,7 +1035,7 @@ namespace PixelPerfect.Services.Impl
                         ContentType = file.ContentType,
                         Size = file.Length,
                         ThumbnailPath = thumbnailPath,
-                        UploadedAt = DateTime.UtcNow,
+                        UploadedAt = DateTime.Now,
                         BatchUpload = true
                     };
 
@@ -1048,7 +1048,7 @@ namespace PixelPerfect.Services.Impl
                         Title = title,
                         Description = request.Description,
                         Metadata = JsonSerializer.Serialize(metadata),
-                        CreatedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.Now,
                         IsBeforeImage = false,
                         AfterImageId = null
                     };
@@ -1064,7 +1064,7 @@ namespace PixelPerfect.Services.Impl
             }
 
             // 更新作品集的最后修改时间
-            portfolio.UpdatedAt = DateTime.UtcNow;
+            portfolio.UpdatedAt = DateTime.Now;
             await _portfolioRepo.UpdateRetoucherPortfolioAsync(portfolio);
 
             return uploadedItems;

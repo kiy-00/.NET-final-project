@@ -66,7 +66,7 @@ namespace PixelPerfect.Services.Impl
             {
                 UserId = userId,
                 PostId = postId,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now
             };
 
             var createdLike = await _likeRepo.CreateAsync(like);

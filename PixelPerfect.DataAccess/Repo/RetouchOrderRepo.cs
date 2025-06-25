@@ -100,7 +100,7 @@ public class RetouchOrderRepo
 
         order.RetouchedPhotoId = retouchedPhotoId;
         order.Status = "Completed";
-        order.CompletedAt = DateTime.UtcNow;
+        order.CompletedAt = DateTime.Now;
 
         _context.Retouchorders.Update(order);
         var affected = await _context.SaveChangesAsync();

@@ -30,7 +30,7 @@ namespace PixelPerfect.DataAccess.Repos
             {
                 FollowerId = followerId,
                 FollowedId = followedId,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 Status = "Active"
             };
 

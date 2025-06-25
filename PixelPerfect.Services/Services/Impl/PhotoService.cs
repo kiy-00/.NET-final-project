@@ -126,7 +126,7 @@ namespace PixelPerfect.Services.Impl
                 Size = file.Length,
                 ContentType = file.ContentType,
                 ThumbnailPath = thumbnailPath,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.Now
             };
 
             // 创建照片记录
@@ -137,7 +137,7 @@ namespace PixelPerfect.Services.Impl
                 Title = request.Title,
                 Description = request.Description,
                 Metadata = JsonSerializer.Serialize(metadata),
-                UploadedAt = DateTime.UtcNow,
+                UploadedAt = DateTime.Now,
                 IsPublic = request.IsPublic,
                 ClientApproved = false
             };
@@ -181,7 +181,7 @@ namespace PixelPerfect.Services.Impl
                         Size = file.Length,
                         ContentType = file.ContentType,
                         ThumbnailPath = thumbnailPath,
-                        UploadedAt = DateTime.UtcNow
+                        UploadedAt = DateTime.Now
                     };
 
                     // 创建照片记录
@@ -190,9 +190,9 @@ namespace PixelPerfect.Services.Impl
                         BookingId = request.BookingId,
                         ImagePath = filePath,
                         Title = Path.GetFileNameWithoutExtension(file.FileName),
-                        Description = $"Uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
+                        Description = $"Uploaded on {DateTime.Now:yyyy-MM-dd}",
                         Metadata = JsonSerializer.Serialize(metadata),
-                        UploadedAt = DateTime.UtcNow,
+                        UploadedAt = DateTime.Now,
                         IsPublic = request.IsPublic,
                         ClientApproved = false
                     };
@@ -353,7 +353,7 @@ namespace PixelPerfect.Services.Impl
                     Size = file.Length,
                     ContentType = file.ContentType,
                     ThumbnailPath = thumbnailPath,
-                    UploadedAt = DateTime.UtcNow,
+                    UploadedAt = DateTime.Now,
                     UploadType = "General"
                 };
 
@@ -363,9 +363,9 @@ namespace PixelPerfect.Services.Impl
                     BookingId = null,  // 使用null而不是0
                     ImagePath = filePath,
                     Title = title ?? Path.GetFileNameWithoutExtension(file.FileName),
-                    Description = description ?? $"Uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
+                    Description = description ?? $"Uploaded on {DateTime.Now:yyyy-MM-dd}",
                     Metadata = JsonSerializer.Serialize(metadata),
-                    UploadedAt = DateTime.UtcNow,
+                    UploadedAt = DateTime.Now,
                     IsPublic = true,  // 默认公开
                     ClientApproved = true  // 自动批准
                 };
@@ -411,7 +411,7 @@ namespace PixelPerfect.Services.Impl
                     Size = file.Length,
                     ContentType = file.ContentType,
                     ThumbnailPath = thumbnailPath,
-                    UploadedAt = DateTime.UtcNow,
+                    UploadedAt = DateTime.Now,
                     UploadType = "PortfolioCover"
                 };
 
@@ -421,9 +421,9 @@ namespace PixelPerfect.Services.Impl
                     BookingId = null,  // 使用null而不是0
                     ImagePath = filePath,
                     Title = "Portfolio Cover",
-                    Description = $"Portfolio cover uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
+                    Description = $"Portfolio cover uploaded on {DateTime.Now:yyyy-MM-dd}",
                     Metadata = JsonSerializer.Serialize(metadata),
-                    UploadedAt = DateTime.UtcNow,
+                    UploadedAt = DateTime.Now,
                     IsPublic = true,  // 封面默认公开
                     ClientApproved = true  // 自动批准
                 };
@@ -489,7 +489,7 @@ namespace PixelPerfect.Services.Impl
                     ThumbnailPath = mainThumbnailPath,
                     BeforeImagePath = beforeFilePath,
                     BeforeThumbnailPath = beforeThumbnailPath,
-                    UploadedAt = DateTime.UtcNow,
+                    UploadedAt = DateTime.Now,
                     UploadType = "PortfolioItem"
                 };
 
@@ -499,9 +499,9 @@ namespace PixelPerfect.Services.Impl
                     BookingId = null,  // 使用null而不是0
                     ImagePath = mainFilePath,
                     Title = title ?? Path.GetFileNameWithoutExtension(mainFile.FileName),
-                    Description = description ?? $"Portfolio item uploaded on {DateTime.UtcNow:yyyy-MM-dd}",
+                    Description = description ?? $"Portfolio item uploaded on {DateTime.Now:yyyy-MM-dd}",
                     Metadata = JsonSerializer.Serialize(metadata),
-                    UploadedAt = DateTime.UtcNow,
+                    UploadedAt = DateTime.Now,
                     IsPublic = true,
                     ClientApproved = true
                 };
@@ -549,9 +549,9 @@ namespace PixelPerfect.Services.Impl
                     Size = file.Length,
                     ContentType = file.ContentType,
                     ThumbnailPath = thumbnailPath,
-                    UploadedAt = DateTime.UtcNow,
+                    UploadedAt = DateTime.Now,
                     UploadType = "Temporary",
-                    ExpiryDate = DateTime.UtcNow.AddDays(7)  // 临时文件7天后过期
+                    ExpiryDate = DateTime.Now.AddDays(7)  // 临时文件7天后过期
                 };
 
                 // 创建照片记录
@@ -560,9 +560,9 @@ namespace PixelPerfect.Services.Impl
                     BookingId = null,  // 使用null而不是0
                     ImagePath = filePath,
                     Title = Path.GetFileNameWithoutExtension(file.FileName),
-                    Description = $"Temporary file, expires on {DateTime.UtcNow.AddDays(7):yyyy-MM-dd}",
+                    Description = $"Temporary file, expires on {DateTime.Now.AddDays(7):yyyy-MM-dd}",
                     Metadata = JsonSerializer.Serialize(metadata),
-                    UploadedAt = DateTime.UtcNow,
+                    UploadedAt = DateTime.Now,
                     IsPublic = true,
                     ClientApproved = true
                 };

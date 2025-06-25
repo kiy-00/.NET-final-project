@@ -127,7 +127,7 @@ namespace PixelPerfect.Services.Impl
                 UserId = userId,
                 Title = request.Title,
                 Content = request.Content,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 IsApproved = false // 默认需要审核
             };
 
@@ -217,7 +217,7 @@ namespace PixelPerfect.Services.Impl
             post.IsApproved = isApproved;
             if (isApproved)
             {
-                post.ApprovedAt = DateTime.UtcNow;
+                post.ApprovedAt = DateTime.Now;
                 post.ApprovedByUserId = adminUserId;
             }
             else

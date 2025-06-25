@@ -105,7 +105,7 @@ namespace PixelPerfect.Services.Impl
                 Status = "Pending", // 初始状态为待确认
                 Requirements = request.Requirements,
                 Price = price,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 CompletedAt = null
             };
 
@@ -132,7 +132,7 @@ namespace PixelPerfect.Services.Impl
 
             // 如果状态变为已完成，设置完成时间
             if (status == "Completed")
-                order.CompletedAt = DateTime.UtcNow;
+                order.CompletedAt = DateTime.Now;
 
             return await _retouchOrderRepo.UpdateAsync(order);
         }
@@ -147,7 +147,7 @@ namespace PixelPerfect.Services.Impl
                 throw new InvalidOperationException("Only orders in 'InProgress' status can be completed.");
 
             order.Status = "Completed";
-            order.CompletedAt = DateTime.UtcNow;
+            order.CompletedAt = DateTime.Now;
 
             return await _retouchOrderRepo.UpdateAsync(order);
         }
@@ -179,7 +179,7 @@ namespace PixelPerfect.Services.Impl
                             Description = comment,
                             IsPublic = false, // 默认不公开
                             ClientApproved = false, // 需要客户确认
-                            UploadedAt = DateTime.UtcNow
+                            UploadedAt = DateTime.Now
                         };
 
                         // 添加照片到数据库
@@ -191,7 +191,7 @@ namespace PixelPerfect.Services.Impl
 
                     // 更新订单状态
                     order.Status = "Completed";
-                    order.CompletedAt = DateTime.UtcNow;
+                    order.CompletedAt = DateTime.Now;
                     await _retouchOrderRepo.UpdateAsync(order);
 
                     // 发送通知给用户
@@ -250,7 +250,7 @@ namespace PixelPerfect.Services.Impl
                         Description = request.Comment,
                         IsPublic = false, // 默认不公开
                         ClientApproved = false, // 需要客户确认
-                        UploadedAt = DateTime.UtcNow
+                        UploadedAt = DateTime.Now
                     };
 
                     // 3. 添加照片到数据库
